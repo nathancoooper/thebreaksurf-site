@@ -1,0 +1,184 @@
+[
+  {
+    "id": "staple-tee",
+    "name": "Staple Tee",
+    "price": 2000,
+    "description": "The Break Surf's first ever product drop. In a synergistic collaboration with local artist Amy Ryalls, the TBS Staple Tee represents absolutely everything that we stand for. Outdoors, oceanic, colourful, energetic. Get yours now and join the movement!",
+    "details": [
+      "220gsm organic cotton jersey",
+      "Relaxed, boxy fit",
+      "Reinforced crew neck",
+      "Pre-washed to minimise shrinkage",
+      "GOTS certified organic cotton",
+      "Designed in collaboration with Amy Ryalls"
+    ],
+    "category": "Tops",
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL"
+    ],
+    "colors": [
+      "Grass",
+      "Sky",
+      "Daffodil"
+    ],
+    "featured": true,
+    "images": {
+      "cover": "/images/uploads/1781975009862-x47wqi.jpg",
+      "gallery": [
+        "/images/uploads/1781975724542-v85i4i.jpg",
+        "/images/uploads/1781975730106-4vp0mw.jpg",
+        "/images/uploads/1781975735433-gedgh0.jpg",
+        "/images/uploads/1781975739888-8gix0l.jpg"
+      ],
+      "colors": {
+        "Sky": {
+          "cover": "/images/uploads/1781976758465-w8tawf.jpg",
+          "gallery": [
+            "/images/uploads/1781976753920-d0fexo.jpg",
+            "/images/uploads/1781976758465-w8tawf.jpg",
+            "/images/uploads/1781976763672-qdp300.jpg",
+            "/images/uploads/1781976768168-k2qler.jpg"
+          ]
+        },
+        "Daffodil": {
+          "cover": "/images/uploads/1781976802570-vxe63u.jpg",
+          "gallery": [
+            "/images/uploads/1781976776339-xlksn8.jpg",
+            "/images/uploads/1781976802570-vxe63u.jpg",
+            "/images/uploads/1781976806776-k99qdt.jpg",
+            "/images/uploads/1781976810895-6cgs88.jpg"
+          ]
+        }
+      }
+    }
+  },
+  {
+    "id": "origins-tee",
+    "name": "Origins Tee",
+    "price": 2500,
+    "description": "Stamp your wardrobe with the Origins Tee; designed for colder conditions and layering.",
+    "details": [
+      "240gsm organic cotton jersey",
+      "Slightly longer body length",
+      "Structured shoulder seam",
+      "Ribbed crew neck",
+      "GOTS certified organic cotton"
+    ],
+    "category": "Tops",
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL"
+    ],
+    "colors": [
+      "Charcoal"
+    ],
+    "featured": true,
+    "images": {
+      "cover": "/images/uploads/1781977181580-br95tc.jpg",
+      "gallery": [
+        "/images/uploads/1781977188578-z6puu1.jpg",
+        "/images/uploads/1781977194135-5k95mm.jpg",
+        "/images/uploads/1781977199238-l8h94a.jpg",
+        "/images/uploads/1781977202422-6cweb9.jpg"
+      ],
+      "colors": {
+        "Charcoal": {
+          "cover": "/images/uploads/1781977181580-br95tc.jpg",
+          "gallery": [
+            "/images/uploads/1781977188578-z6puu1.jpg",
+            "/images/uploads/1781977194135-5k95mm.jpg",
+            "/images/uploads/1781977199238-l8h94a.jpg",
+            "/images/uploads/1781977202422-6cweb9.jpg"
+          ]
+        }
+      }
+    }
+  },
+  {
+    "id": "new-heights-hoodie",
+    "name": "New Heights Hoodie",
+    "price": 4000,
+    "description": "In collaboration with small Japanese artist Youki, our first ever hoodie is designed to represent the endless trials and attempts required to succeed in achieving difficult goals.",
+    "details": [
+      "400gsm organic cotton fleece",
+      "Garment washed for soft, lived-in feel",
+      "Oversized fit",
+      "Deep kangaroo pocket",
+      "Adjustable drawcord hood",
+      "Ribbed cuffs and hem",
+      "GOTS certified organic cotton",
+      "Designed in collaboration with Youki"
+    ],
+    "category": "Tops",
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL"
+    ],
+    "colors": [
+      "Sand",
+      "Ocean",
+      "Pine"
+    ],
+    "featured": true,
+    "images": {
+      "cover": "/images/uploads/1781976903350-04loh4.jpg",
+      "gallery": [
+        "/images/uploads/1781976906177-fozo31.jpg",
+        "/images/uploads/1781976908577-eswzzq.jpg",
+        "/images/uploads/1781976910854-595sbu.jpg",
+        "/images/uploads/1781976915069-rle2rv.jpg"
+      ],
+      "colors": {
+        "Ocean": {
+          "cover": "/images/uploads/1781976938181-ks3q7p.jpg",
+          "gallery": [
+            "/images/uploads/1781976938181-ks3q7p.jpg",
+            "/images/uploads/1781976940966-sb32cl.jpg",
+            "/images/uploads/1781976944104-1rjp5m.jpg",
+            "/images/uploads/1781976946636-jdso8x.jpg"
+          ]
+        },
+        "Pine": {
+          "cover": "/images/uploads/1781976954064-zpo9ee.jpg",
+          "gallery": [
+            "/images/uploads/1781976954064-zpo9ee.jpg",
+            "/images/uploads/1781976956841-7nc1bd.jpg",
+            "/images/uploads/1781976959139-hhr1va.jpg",
+            "/images/uploads/1781976961954-j0odkl.jpg"
+          ]
+        }
+      }
+    }
+  },
+  {
+    "id": "tbs-stickers",
+    "name": "TBS Stickers",
+    "price": 100,
+    "description": "Rep the brand with our new biodegradable vegan TBS stickers!",
+    "details": [
+      "Biodegradable",
+      "Vegan"
+    ],
+    "category": "Accessories",
+    "sizes": [],
+    "colors": [],
+    "colorHex": {
+      "default": "#c7c5be"
+    },
+    "featured": false,
+    "images": {
+      "cover": "/images/uploads/1781977396651-xrla6d.jpg",
+      "gallery": [
+        "/images/uploads/1781977399645-u4i8fs.jpg"
+      ],
+      "colors": {}
+    }
+  }
+]

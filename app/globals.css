@@ -1,0 +1,263 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&family=Inter:wght@300;400;500;600&display=swap');
+@import "tailwindcss";
+
+/* Smooth image loading */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+img {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+/* Skeleton placeholder for loading images */
+.skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* Departure Mono — self-hosted (SIL OFL, see public/fonts/DepartureMono-LICENSE.txt) */
+@font-face {
+  font-family: 'Departure Mono';
+  src: url('/fonts/DepartureMono-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ── Brand colour palette ──────────────────────────────────── */
+@theme {
+  --color-forest:   #2A4A1E;
+  --color-terra:    #C4622D;
+  --color-cream:    #F2EDE3;
+  --color-sage:     #7A9A6F;
+  --color-amber:    #D4862A;
+  --color-charcoal: #1C1C1C;
+  --color-bark:     #8B6F52;
+  --color-moss:     #4A6741;
+
+  --font-display:   'Playfair Display', Georgia, serif;
+  --font-body:      'Inter', system-ui, sans-serif;
+  --font-departure: 'Departure Mono', ui-monospace, monospace;
+}
+
+/* ── Base ──────────────────────────────────────────────────── */
+:root {
+  --background: #F2EDE3;
+  --foreground: #1C1C1C;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-tap-highlight-color: transparent;
+  overflow-x: hidden;
+}
+
+/* Ensure every element responds to touch without double-tap delay */
+* {
+  touch-action: manipulation;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* iOS Safari: buttons need cursor:pointer + touch-action to fire tap events */
+button, [role="button"] {
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+a {
+  touch-action: manipulation;
+}
+
+
+/* Placeholder image fallback */
+.placeholder-bg {
+  background: linear-gradient(135deg, #d4c9b8 0%, #b5c4a8 100%);
+}
+
+.scrollbar-none {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+/* Fades content to transparent as it scrolls behind the top/bottom edge of
+   its container, instead of getting hard-clipped. */
+.fade-edges {
+  -webkit-mask-image: linear-gradient(to bottom, transparent, black 24px, black calc(100% - 24px), transparent);
+  mask-image: linear-gradient(to bottom, transparent, black 24px, black calc(100% - 24px), transparent);
+}
+
+::selection {
+  background-color: #2A4A1E;
+  color: #F5F0E8;
+}
+
+.footer-link {
+  transition: color 0.15s ease;
+}
+.footer-link:hover {
+  color: #d97706;
+}
+
+.footer-logo {
+  transform: rotate(-6deg);
+  transition: transform 0.3s ease;
+}
+.footer-logo:hover {
+  transform: rotate(0deg);
+}
+
+
+@keyframes tbs-particle {
+  0%   { opacity: 0;    transform: translate(-50%, -50%) scale(0.3); }
+  20%  { opacity: 0.7;  transform: translate(-50%, -50%) scale(1);   }
+  100% { opacity: 0;    transform: translate(-50%, calc(-50% - 12px)) scale(0.2); }
+}
+
+@keyframes tbs-step-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-step-in {
+  animation: tbs-step-in 0.35s ease;
+}
+
+@keyframes email-poof-out {
+  0%   { opacity: 1; transform: scale(1); filter: blur(0); }
+  45%  { opacity: 0.72; transform: scale(0.96); filter: blur(0.5px); }
+  100% { opacity: 0; transform: scale(0.76) translateY(-5px); filter: blur(4px); }
+}
+
+.email-poof-out {
+  z-index: 1;
+  pointer-events: none;
+  transform-origin: center;
+  animation: email-poof-out 680ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes email-preview-disintegrate {
+  0%, 14% { opacity: 1; }
+  26%, 100% { opacity: 0; }
+}
+
+.email-preview-disintegrate {
+  pointer-events: none;
+  animation: email-preview-disintegrate 920ms linear forwards;
+  will-change: opacity;
+}
+
+@keyframes email-preview-shard-scatter {
+  0%, 12% {
+    opacity: 1;
+    transform: translate(0, 0) rotate(0) scale(1);
+  }
+  58% {
+    opacity: 0.92;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--shard-x), var(--shard-y)) rotate(var(--shard-rotation)) scale(0.94);
+  }
+}
+
+.email-preview-shard {
+  animation: email-preview-shard-scatter 920ms cubic-bezier(0.22, 0.72, 0.24, 1) var(--shard-delay) forwards;
+  transform-origin: center;
+  will-change: opacity, transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .email-poof-out { animation-duration: 1ms; }
+  .email-preview-disintegrate { animation-duration: 1ms; }
+  .email-preview-shard { animation-duration: 1ms; }
+}
+
+/* Staff panels resolve device and explicit preferences to one attribute before
+   first paint. Exact class-token matching avoids turning hover utilities into
+   permanent colours. */
+html[data-tbs-theme-resolved='dark'] .tbs-dark-surface {
+  --tbs-panel: #111111;
+  --tbs-panel-raised: #1a1a1a;
+  --tbs-control: #222222;
+  --tbs-page: #0a0a0a;
+  --tbs-border: #333333;
+  --tbs-text: #e0e0e0;
+  --tbs-muted: #888888;
+  --tbs-faint: #666666;
+  color-scheme: dark;
+  background-color: var(--tbs-page) !important;
+  color: var(--tbs-text);
+}
+
+html[data-tbs-theme-resolved='dark'] .tbs-dark-surface [class~='bg-white'] { background-color: var(--tbs-panel) !important; }
+html[data-tbs-theme-resolved='dark'] .tbs-dark-surface [class~='bg-gray-50'],
+html[data-tbs-theme-resolved='dark'] .tbs-dark-surface [class~='bg-gray-50/50'],
+html[data-tbs-theme-resolved='dark'] .tbs-dark-surface [class~='bg-gray-50/60'],
+html[data-tbs-theme-resolved='dark'] .tbs-dark-surface [class~='bg-gray-50/95'],
+html[data-tbs-theme-resolved='dark'] .tbs-dark-surface [class~='bg-[#f7f7f5]'],
+html[data-tbs-theme-resolved='dark'] .tbs-dark-surface [class~='bg-[#ecebe7]'],
+html[data-tbs-theme-resolved='dark'] .tbs-dark-surface .email-message-plain,
+html[data-tbs-theme-resolved='dark'] .tbs-dark-surface .finance-transaction-table { background-color: var(--tbs-page) !important; }
+html[data-tbs-theme-resolved='dark'] .tbs-dark-surface [class~='bg-gray-100'],
+html[data-tbs-theme-resolved='dark'] .tbs-dark-surface [class~='bg-gray-200/70'] { background-color: var(--tbs-panel-raised) !important; }
+html[data-tbs-theme-resolved='dark'] .tbs-dark-surface [class~='bg-gray-900'] { background-color: var(--tbs-panel-raised) !important; }
+
+html[data-tbs-theme-resolved='dark'] .tbs-dark-surface [class~='text-gray-900'],
+html[data-tbs-theme-resolved='dark'] .tbs-dark-surface [class~='text-gray-800'] { color: var(--tbs-text) !important; }
+html[data-tbs-theme-resolved='dark'] .tbs-dark-surface [class~='text-gray-700'],
+html[data-tbs-theme-resolved='dark'] .tbs-dark-surface [class~='text-gray-600'],
+html[data-tbs-theme-resolved='dark'] .tbs-dark-surface [class~='text-gray-500'] { color: var(--tbs-muted) !important; }
+html[data-tbs-theme-resolved='dark'] .tbs-dark-surface [class~='text-gray-400'],
+html[data-tbs-theme-resolved='dark'] .tbs-dark-surface [class~='text-gray-300'],
+html[data-tbs-theme-resolved='dark'] .tbs-dark-surface [class~='text-gray-200'] { color: var(--tbs-faint) !important; }
+
+html[data-tbs-theme-resolved='dark'] .tbs-dark-surface [class~='border-gray-50'],
+html[data-tbs-theme-resolved='dark'] .tbs-dark-surface [class~='border-gray-100'],
+html[data-tbs-theme-resolved='dark'] .tbs-dark-surface [class~='border-gray-200'],
+html[data-tbs-theme-resolved='dark'] .tbs-dark-surface [class~='border-gray-300'],
+html[data-tbs-theme-resolved='dark'] .tbs-dark-surface [class~='border-gray-400'] { border-color: var(--tbs-border) !important; }
+html[data-tbs-theme-resolved='dark'] .tbs-dark-surface [class~='divide-gray-50'] > :not(:last-child),
+html[data-tbs-theme-resolved='dark'] .tbs-dark-surface [class~='divide-gray-100'] > :not(:last-child),
+html[data-tbs-theme-resolved='dark'] .tbs-dark-surface [class~='divide-gray-200'] > :not(:last-child) { border-color: var(--tbs-border) !important; }
+
+html[data-tbs-theme-resolved='dark'] .tbs-dark-surface input,
+html[data-tbs-theme-resolved='dark'] .tbs-dark-surface select,
+html[data-tbs-theme-resolved='dark'] .tbs-dark-surface textarea {
+  background-color: var(--tbs-control) !important;
+  border-color: var(--tbs-border) !important;
+  color: var(--tbs-text) !important;
+}
+html[data-tbs-theme-resolved='dark'] .tbs-dark-surface input::placeholder,
+html[data-tbs-theme-resolved='dark'] .tbs-dark-surface textarea::placeholder { color: var(--tbs-faint); }
+
+/* Light utility sections nested inside dark cards are raised controls, while
+   page-level gray backgrounds remain the lighter navy canvas. */
+html[data-tbs-theme-resolved='dark'] .tbs-dark-surface [class~='bg-white'] [class~='bg-gray-50'],
+html[data-tbs-theme-resolved='dark'] .tbs-dark-surface [class~='bg-white'] [class~='bg-gray-50/50'],
+html[data-tbs-theme-resolved='dark'] .tbs-dark-surface [class~='bg-white'] [class~='bg-gray-50/60'] {
+  background-color: var(--tbs-control) !important;
+}
+
+html[data-tbs-theme-resolved='dark'] .tbs-dark-surface aside { background-color: var(--tbs-page) !important; }
+html[data-tbs-theme-resolved='dark'] .tbs-dark-surface aside nav a,
+html[data-tbs-theme-resolved='dark'] .tbs-dark-surface aside nav button,
+html[data-tbs-theme-resolved='dark'] .tbs-dark-surface aside > div:last-of-type a,
+html[data-tbs-theme-resolved='dark'] .tbs-dark-surface aside > div:last-of-type button { background-color: transparent !important; }
+html[data-tbs-theme-resolved='dark'] .tbs-dark-surface [class~='hover:bg-gray-50']:hover,
+html[data-tbs-theme-resolved='dark'] .tbs-dark-surface [class~='hover:bg-gray-100']:hover { background-color: var(--tbs-panel-raised) !important; }

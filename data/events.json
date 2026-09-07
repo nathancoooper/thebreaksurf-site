@@ -1,0 +1,46 @@
+[
+  {
+    "id": "litter-pick-july-2026",
+    "name": "Community Litter Pick",
+    "date": "2026-05-03T00:00:00.000Z",
+    "location": "Bournemouth Beach",
+    "lat": 50.71627470074322,
+    "lng": -1.8753883177454054,
+    "description": "Join us for our monthly community litter pick. We meet at the South Car Park at 10am, spend a couple of hours cleaning up the beach and dunes, then usually grab a coffee together after. All equipment provided — just bring yourself.",
+    "cover": "/images/uploads/1782065145684-1r7yrp.jpeg"
+  },
+  {
+    "id": "pop-up-july-2026",
+    "name": "TBS Pop-Up",
+    "date": "2026-04-08T00:00:00.000Z",
+    "location": "Bournemouth University",
+    "lat": 50.74274257175623,
+    "lng": -1.896218468125193,
+    "description": "Come and see the latest collection in person. We'll have the full range available to try and buy, plus a few pieces that haven't made it to the site yet. Free entry, all welcome.",
+    "cover": ""
+  },
+  {
+    "id": "litter-pick-august-2026",
+    "name": "Community Litter Pick",
+    "date": "2026-04-07T00:00:00.000Z",
+    "location": "Hengistbury Head, Bournemouth",
+    "description": "Our August litter pick heads out to Hengistbury Head — one of our favourite spots on the South Coast and one that needs a bit of love. Meet at the main car park at 10am.",
+    "cover": ""
+  },
+  {
+    "id": "aub-market",
+    "name": "AUB Market",
+    "date": "2026-04-07T00:00:00.000Z",
+    "location": "Arts University Bournemouth",
+    "description": "",
+    "cover": "/images/uploads/1782065476914-9jiq2y.jpeg"
+  },
+  {
+    "id": "market",
+    "name": "Market",
+    "date": "2026-07-04T00:00:00.000Z",
+    "location": "",
+    "description": "",
+    "cover": ""
+  }
+]

@@ -1,0 +1,51 @@
+name: Deploy to Server
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            set -e
+
+            cd /home/cooper2n/Documents/thebreaksite
+
+            echo ">>> Pulling latest code..."
+            git pull origin main
+
+            echo ">>> Building Docker images..."
+            docker compose build --no-cache web
+
+            echo ">>> Rolling restart..."
+            docker compose up -d --force-recreate --no-deps web
+
+            echo ">>> Waiting for health check..."
+            sleep 10
+
+            for i in $(seq 1 30); do
+              STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/ 2>/dev/null || echo "000")
+              if [ "$STATUS" = "200" ]; then
+                echo ">>> Site healthy (HTTP $STATUS)"
+                exit 0
+              fi
+              echo ">>> Attempt $i: HTTP $STATUS, retrying in 5s..."
+              sleep 5
+            done
+
+            echo ">>> ERROR: Site did not become healthy after 30 attempts"
+            docker compose logs --tail=50 web
+            exit 1

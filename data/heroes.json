@@ -1,0 +1,38 @@
+[
+  {
+    "id": "home",
+    "title": "Homepage",
+    "label": "Outdoor · Creative · Independent",
+    "heading": "Start outside.",
+    "buttonText": "Shop the collection",
+    "buttonHref": "/products",
+    "image": "/images/hero.jpg"
+  },
+  {
+    "id": "about",
+    "title": "About",
+    "label": "Who we are",
+    "heading": "Worn with intent",
+    "buttonText": "Get in touch",
+    "buttonHref": "mailto:nathan@thebreaksurf.co.uk",
+    "image": "/images/about-hero.jpg"
+  },
+  {
+    "id": "environment",
+    "title": "Environment",
+    "label": "Our commitment",
+    "heading": "Leave it better.",
+    "buttonText": "Come to our next litter pick",
+    "buttonHref": "/writing/first-community-litter-pick",
+    "image": "/images/environment-hero.jpg"
+  },
+  {
+    "id": "university",
+    "title": "University collab",
+    "label": "Collaboration",
+    "heading": "Your garment, embroidered.",
+    "buttonText": "Get started",
+    "buttonHref": "#dropoff-form",
+    "image": "/images/hero.jpg"
+  }
+]

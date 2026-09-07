@@ -1,0 +1,26 @@
+{
+  "categories": ["T-Shirts and Long Sleeves", "Outerwear", "Hoodies and Sweatshirts", "Decoration", "Accessories"],
+  "families": {
+    "Anthem T-Shirt": "T-Shirts and Long Sleeves",
+    "Creator 2.0 Long Sleeve": "T-Shirts and Long Sleeves",
+    "FoTL Original Tee": "T-Shirts and Long Sleeves",
+    "FoTL Premium Tee": "T-Shirts and Long Sleeves",
+    "FoTL Valueweight Tee": "T-Shirts and Long Sleeves",
+    "Regular Fit Long Sleeve Shirt": "T-Shirts and Long Sleeves",
+    "Tank Top": "T-Shirts and Long Sleeves",
+    "Unisex Creator 2.0 Iconic T-Shirt": "T-Shirts and Long Sleeves",
+    "PolarTherm Top": "Outerwear",
+    "Reset Windbreaker": "Outerwear",
+    "College Hoodie": "Hoodies and Sweatshirts",
+    "Heavy Blend Adult Crew Neck": "Hoodies and Sweatshirts",
+    "Sweatshirt": "Hoodies and Sweatshirts",
+    "Unisex Cruiser 2.0 Hoodie": "Hoodies and Sweatshirts",
+    "Backing (20cm, 80g)": "Decoration",
+    "Origins Tee DTF": "Decoration",
+    "Sensa Green Thread 40": "Decoration",
+    "Staple Tee (Back-Print)": "Decoration",
+    "BF Microfleece Balaclava": "Accessories",
+    "Light Tote Bag": "Accessories",
+    "Premium organic canvas shopper long handle": "Accessories"
+  }
+}

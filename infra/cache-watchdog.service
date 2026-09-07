@@ -1,0 +1,6 @@
+[Unit]
+Description=Check Cloudflare cache is actually serving HITs and alert if not
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/cache-watchdog.sh

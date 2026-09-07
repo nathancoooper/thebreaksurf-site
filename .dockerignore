@@ -1,0 +1,7 @@
+.git
+.next
+node_modules
+public/images/uploads
+.env.local
+.env*.local
+*.log
