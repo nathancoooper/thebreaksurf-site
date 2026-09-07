@@ -6,7 +6,9 @@ WORKDIR /app
 # Install dependencies inside the Linux build image. This keeps deployments
 # reproducible and avoids host npm versions rewriting the production lockfile.
 COPY package.json package-lock.json ./
-RUN apk add --no-cache python3 make g++ && npm ci
+# Lockfile is generated with npm 11 — match it here so optional-dep
+# resolution (e.g. sharp's wasm entries) agrees and `npm ci` stays happy.
+RUN npm i -g npm@11 && apk add --no-cache python3 make g++ && npm ci
 COPY . .
 # Dummy secrets so `next build` doesn't crash on missing env vars
 ENV ADMIN_JWT_SECRET=build-placeholder \
