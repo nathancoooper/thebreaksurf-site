@@ -19,8 +19,6 @@
     "@fortawesome/free-solid-svg-icons": "^7.2.0",
     "@fortawesome/react-fontawesome": "^3.3.1",
     "@opennextjs/cloudflare": "^1.20.4",
-    "bcryptjs": "^3.0.3",
-    "jose": "^6.2.3",
     "mdast-util-find-and-replace": "^3.0.2",
     "next": "^16.3.3",
     "react": "^19.2.8",

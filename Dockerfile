@@ -10,10 +10,14 @@ COPY package.json package-lock.json ./
 # resolution (e.g. sharp's wasm entries) agrees and `npm ci` stays happy.
 RUN npm i -g npm@11 && apk add --no-cache python3 make g++ && npm ci
 COPY . .
-# Dummy secrets so `next build` doesn't crash on missing env vars
+# NEXT_PUBLIC_* vars are baked into the client bundle at build time — pass
+# the real production values via build args (see docker-compose.yml). The
+# fallbacks are safe public defaults, never secrets.
+ARG NEXT_PUBLIC_APP_URL=https://thebreaksurf.co.uk
+ARG NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_live_placeholder
 ENV ADMIN_JWT_SECRET=build-placeholder \
-    NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_live_placeholder \
-    NEXT_PUBLIC_APP_URL=http://localhost:3000
+    NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=$NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY \
+    NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
 RUN npm run build
 
 # ── runner: minimal production image ─────────────────────────────────────────
