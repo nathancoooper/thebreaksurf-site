@@ -1,0 +1,27 @@
+[
+ {
+  "id": "litter-pick-july-2026",
+  "data": "{\"id\":\"litter-pick-july-2026\",\"name\":\"Community Litter Pick\",\"date\":\"2026-05-03T00:00:00.000Z\",\"location\":\"Bournemouth Beach\",\"lat\":50.71627470074322,\"lng\":-1.8753883177454054,\"description\":\"Join us for our monthly community litter pick. We meet at the South Car Park at 10am, spend a couple of hours cleaning up the beach and dunes, then usually grab a coffee together after. All equipment provided \u2014 just bring yourself.\",\"cover\":\"/images/uploads/events/thebreaksite_events_july-litter-pick_20260704_cover_V002.webp\"}",
+  "updated_at": "2026-08-31 13:03:00"
+ },
+ {
+  "id": "pop-up-july-2026",
+  "data": "{\"id\":\"pop-up-july-2026\",\"name\":\"TBS Pop-Up\",\"date\":\"2026-04-08T00:00:00.000Z\",\"location\":\"Bournemouth University\",\"lat\":50.74274257175623,\"lng\":-1.896218468125193,\"description\":\"Come and see the latest collection in person. We'll have the full range available to try and buy, plus a few pieces that haven't made it to the site yet. Free entry, all welcome.\",\"cover\":\"\"}",
+  "updated_at": "2026-08-31 13:03:00"
+ },
+ {
+  "id": "litter-pick-august-2026",
+  "data": "{\"id\":\"litter-pick-august-2026\",\"name\":\"Community Litter Pick\",\"date\":\"2026-04-07T00:00:00.000Z\",\"location\":\"Hengistbury Head, Bournemouth\",\"description\":\"Our August litter pick heads out to Hengistbury Head \u2014 one of our favourite spots on the South Coast and one that needs a bit of love. Meet at the main car park at 10am.\",\"cover\":\"\"}",
+  "updated_at": "2026-08-31 13:03:00"
+ },
+ {
+  "id": "aub-market",
+  "data": "{\"id\":\"aub-market\",\"name\":\"AUB Market\",\"date\":\"2026-04-07T00:00:00.000Z\",\"location\":\"Arts University Bournemouth\",\"description\":\"\",\"cover\":\"/images/uploads/events/thebreaksite_events_bu-market_20251118_cover.jpg\"}",
+  "updated_at": "2026-08-31 13:03:00"
+ },
+ {
+  "id": "market",
+  "data": "{\"id\":\"market\",\"name\":\"Market\",\"date\":\"2026-07-04T00:00:00.000Z\",\"location\":\"\",\"description\":\"\",\"cover\":\"/images/uploads/events/thebreaksite_events_grooves-n-garms_cover.jpg\"}",
+  "updated_at": "2026-08-31 13:03:00"
+ }
+]

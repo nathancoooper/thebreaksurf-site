@@ -9,7 +9,9 @@
     "lint": "eslint",
     "build:cloudflare": "opennextjs-cloudflare build",
     "preview:cloudflare": "opennextjs-cloudflare build && wrangler dev",
-    "deploy:cloudflare": "opennextjs-cloudflare build && opennextjs-cloudflare deploy"
+    "deploy:cloudflare": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
+    "db:migrate": "mysql -h ${DB_HOST:-127.0.0.1} -u ${DB_USER:-tbs} -p${DB_PASSWORD} ${DB_NAME:-thebreaksite} < db/migrations/001_init.sql",
+    "db:seed": "node db/seed.mjs"
   },
   "dependencies": {
     "@fortawesome/fontawesome-svg-core": "^7.2.0",
