@@ -4,7 +4,7 @@ import { UniversitySubmission } from '@/types';
 export async function saveSubmission(submission: UniversitySubmission): Promise<void> {
   const db = getDb();
   await db.prepare(
-    'INSERT INTO university_submissions (id, data) VALUES (?, ?) ON CONFLICT(id) DO UPDATE SET data = ?, updated_at = datetime(\'now\')'
+    'INSERT INTO university_submissions (id, data) VALUES (?, ?) ON DUPLICATE KEY UPDATE data = ?, updated_at = NOW()'
   )
     .bind(submission.id, JSON.stringify(submission), JSON.stringify(submission))
     .run();
@@ -12,7 +12,7 @@ export async function saveSubmission(submission: UniversitySubmission): Promise<
 
 export async function listSubmissions(): Promise<UniversitySubmission[]> {
   const db = getDb();
-  const rows = await db.prepare('SELECT data FROM university_submissions ORDER BY rowid DESC')
+  const rows = await db.prepare('SELECT data FROM university_submissions ORDER BY created_at DESC')
     .all<{ data: string }>();
   return rows.results.map((r: { data: string }) => JSON.parse(r.data) as UniversitySubmission);
 }
@@ -25,7 +25,7 @@ export async function updateSubmission(id: string, completed: boolean): Promise<
   if (!row) return null;
   const submission = JSON.parse(row.data) as UniversitySubmission;
   submission.completed = completed;
-  await db.prepare('UPDATE university_submissions SET data = ?, updated_at = datetime(\'now\') WHERE id = ?')
+  await db.prepare('UPDATE university_submissions SET data = ?, updated_at = NOW() WHERE id = ?')
     .bind(JSON.stringify(submission), id)
     .run();
   return submission;

@@ -20,7 +20,7 @@ export async function readDataByKey<T>(table: string, key: string): Promise<T | 
 export async function writeData<T extends { id: string }>(table: string, item: T): Promise<void> {
   const db = getDb();
   await db.prepare(
-    `INSERT INTO ${table} (id, data) VALUES (?, ?) ON CONFLICT(id) DO UPDATE SET data = ?, updated_at = datetime('now')`
+    `INSERT INTO ${table} (id, data) VALUES (?, ?) ON DUPLICATE KEY UPDATE data = ?, updated_at = NOW()`
   )
     .bind(item.id, JSON.stringify(item), JSON.stringify(item))
     .run();
@@ -43,7 +43,7 @@ export async function readSetting<T>(table: string, key: string): Promise<T | nu
 export async function writeSetting(table: string, key: string, value: unknown): Promise<void> {
   const db = getDb();
   await db.prepare(
-    `INSERT INTO ${table} (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = ?, updated_at = datetime('now')`
+    `INSERT INTO ${table} (key, value) VALUES (?, ?) ON DUPLICATE KEY UPDATE value = ?, updated_at = NOW()`
   )
     .bind(key, JSON.stringify(value), JSON.stringify(value))
     .run();

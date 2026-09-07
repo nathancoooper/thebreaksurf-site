@@ -30,7 +30,7 @@ export async function saveHero(id: string, updates: Partial<Hero>): Promise<Hero
   const updated = { ...existing, ...updates };
   const db = getDb();
   await db.prepare(
-    'INSERT INTO heroes (id, data) VALUES (?, ?) ON CONFLICT(id) DO UPDATE SET data = ?, updated_at = datetime(\'now\')'
+    'INSERT INTO heroes (id, data) VALUES (?, ?) ON DUPLICATE KEY UPDATE data = ?, updated_at = NOW()'
   )
     .bind(id, JSON.stringify(updated), JSON.stringify(updated))
     .run();

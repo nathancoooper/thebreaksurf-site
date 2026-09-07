@@ -24,7 +24,7 @@ async function readSnapshot(): Promise<StockSnapshot> {
 async function writeSnapshot(snapshot: StockSnapshot): Promise<void> {
   const db = getDb();
   await db.prepare(
-    "INSERT INTO stock_snapshot (key, value) VALUES ('snapshot', ?) ON CONFLICT(key) DO UPDATE SET value = ?, updated_at = datetime('now')"
+    "INSERT INTO stock_snapshot (key, value) VALUES ('snapshot', ?) ON DUPLICATE KEY UPDATE value = ?, updated_at = NOW()"
   )
     .bind(JSON.stringify(snapshot), JSON.stringify(snapshot))
     .run();

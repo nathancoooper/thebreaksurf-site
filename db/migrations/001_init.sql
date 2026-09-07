@@ -1,0 +1,72 @@
+-- MariaDB schema for thebreaksurf-site (public site only).
+-- Run once against a fresh database:
+--   mysql -h 127.0.0.1 -u tbs -p thebreaksite < db/migrations/001_init.sql
+-- Translated from the old D1 schema (docs/legacy-d1-schema.sql).
+-- Conventions: JSON blobs in LONGTEXT `data`, key-value tables use `key`,
+-- every table carries updated_at. Reviews stay file-based
+-- (data/reviews.json via volume), stats stay in R2 — no tables for those.
+
+CREATE TABLE IF NOT EXISTS products (
+  id VARCHAR(191) PRIMARY KEY,
+  data LONGTEXT NOT NULL,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS events (
+  id VARCHAR(191) PRIMARY KEY,
+  data LONGTEXT NOT NULL,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS heroes (
+  id VARCHAR(191) PRIMARY KEY,
+  data LONGTEXT NOT NULL,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS posts (
+  slug VARCHAR(191) PRIMARY KEY,
+  title VARCHAR(255) NOT NULL,
+  date VARCHAR(32) NOT NULL,
+  image VARCHAR(512) NULL,
+  excerpt TEXT NULL,
+  content LONGTEXT NULL,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS promotions (
+  id VARCHAR(191) PRIMARY KEY,
+  data LONGTEXT NOT NULL,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS settings (
+  `key` VARCHAR(191) PRIMARY KEY,
+  value LONGTEXT NOT NULL,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS stock_snapshot (
+  `key` VARCHAR(191) PRIMARY KEY,
+  value LONGTEXT NOT NULL,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS post_redirects (
+  old_slug VARCHAR(191) PRIMARY KEY,
+  new_slug VARCHAR(191) NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS university_submissions (
+  id VARCHAR(191) PRIMARY KEY,
+  data LONGTEXT NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_uni_submissions_created ON university_submissions(created_at);
+
+CREATE TABLE IF NOT EXISTS pending_checkouts (
+  session_id VARCHAR(191) PRIMARY KEY,
+  data LONGTEXT NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);

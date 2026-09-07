@@ -8,7 +8,7 @@ export async function recordSlugRename(oldSlug: string, newSlug: string) {
     .run();
   // Add the new redirect
   await db.prepare(
-    'INSERT INTO post_redirects (old_slug, new_slug) VALUES (?, ?) ON CONFLICT(old_slug) DO UPDATE SET new_slug = ?'
+    'INSERT INTO post_redirects (old_slug, new_slug) VALUES (?, ?) ON DUPLICATE KEY UPDATE new_slug = ?'
   )
     .bind(oldSlug, newSlug, newSlug)
     .run();
