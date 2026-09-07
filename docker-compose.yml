@@ -27,6 +27,7 @@ services:
       DB_NAME: ${DB_NAME:-thebreaksite}
       DB_USER: ${DB_USER:-tbs}
       DB_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD}
+      BLOBS_DIR: /app/public/images/uploads
     volumes:
       - tbs_data:/app/data
       - tbs_uploads:/app/public/images/uploads

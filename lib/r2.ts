@@ -23,7 +23,9 @@ export interface R2File {
 }
 
 function baseDir(): string {
-  return process.env.BLOBS_DIR ?? '/app/data/blobs';
+  // Same directory nginx serves statically (tbs_uploads volume) — both
+  // paths hit the same files. Overridable via BLOBS_DIR.
+  return process.env.BLOBS_DIR ?? '/app/public/images/uploads';
 }
 
 function filePath(key: string): string {
