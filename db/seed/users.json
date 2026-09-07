@@ -1,0 +1,12 @@
+[
+ {
+  "id": "owner",
+  "data": "{\"name\": \"Nathan Cooper\", \"email\": \"nathan@thebreaksurf.co.uk\", \"passwordHash\": \"$2b$12$lPqKn42BmU5uHzdA7e45EurGL.wLbC8ri5QfA2uq9gRFzNBc92/wq\", \"totpSecret\": \"AJWBXHP5ULW2HZZRWXVK7BZO2IQMGJE6\", \"createdAt\": \"2026-06-24T20:51:57.872Z\", \"id\": \"owner\", \"role\": \"owner\", \"permissions\": []}",
+  "updated_at": "2026-09-01 21:19:20"
+ },
+ {
+  "id": "member-1784193354173-dw8s4d",
+  "data": "{\"id\": \"member-1784193354173-dw8s4d\", \"name\": \"Archie Ellis\", \"email\": \"archie@thebreaksurf.co.uk\", \"passwordHash\": \"$2b$12$gHUFOEMJr36ERvgbbJma6O5tm.9wjVuJOBc66YbMv2BkQG0mOqbca\", \"totpSecret\": \"UVL7J7MMH66CNRLXEEZVODQ4MIHBYNYF\", \"role\": \"member\", \"permissions\": [\"/admin/events\", \"/admin/social\", \"/admin/orders\", \"/admin/reviews\", \"/admin/whiteboards\", \"/admin/meetings\", \"/admin/tasks\", \"/admin/emails\"], \"createdAt\": \"2026-07-16T09:15:54.173Z\", \"emailAddresses\": [\"archie@thebreaksurf.co.uk\"]}",
+  "updated_at": "2026-09-01 21:19:20"
+ }
+]

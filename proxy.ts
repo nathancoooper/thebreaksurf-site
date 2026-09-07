@@ -1,6 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { jwtVerify } from 'jose';
 import fs from 'node:fs';
 import path from 'node:path';
+
+const SESSION_COOKIE = 'tbs-session';
+const UNPROTECTED = ['/admin/login', '/admin/setup'];
+
+async function hasValidSession(request: NextRequest): Promise<boolean> {
+  const token = request.cookies.get(SESSION_COOKIE)?.value;
+  if (!token) return false;
+  const s = process.env.ADMIN_JWT_SECRET;
+  if (!s) return false;
+  try {
+    const { payload } = await jwtVerify(token, new TextEncoder().encode(s));
+    return !payload.pending2FA;
+  } catch {
+    return false;
+  }
+}
 
 function isMaintenanceOn(): boolean {
   try {
@@ -14,17 +31,31 @@ function isMaintenanceOn(): boolean {
 export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
-  // Maintenance mode: everyone except /construction gets redirected.
-  // (Admin preview bypass lived in the old monorepo's proxy and was cut
-  // with the admin panel — see TBS Admin repo.)
-  if (!pathname.startsWith('/construction') && isMaintenanceOn()) {
-    return NextResponse.redirect(new URL('/construction', request.url));
+  // Auth gate for admin routes (login and setup pages are always accessible).
+  // The admin service only ever receives admin.thebreaksurf.co.uk traffic
+  // from nginx, but the gate stays so direct VPS access is safe too.
+  if (pathname.startsWith('/admin') && !UNPROTECTED.includes(pathname)) {
+    if (!await hasValidSession(request)) {
+      return NextResponse.redirect(new URL('/admin/login', request.url));
+    }
   }
 
-  // Public pages are cacheable at Cloudflare's edge. Cart/checkout result
-  // pages are never cached.
+  // Maintenance mode: redirect non-admin visitors to /construction unless
+  // they have a valid admin session.
+  if (!pathname.startsWith('/admin') && !pathname.startsWith('/construction') && isMaintenanceOn()) {
+    if (!await hasValidSession(request)) {
+      return NextResponse.redirect(new URL('/construction', request.url));
+    }
+    const res = NextResponse.next();
+    res.headers.set('Cache-Control', 'private, no-store');
+    return res;
+  }
+
+  // Public pages are cacheable at the edge. Cart/checkout result pages
+  // and all admin routes are never cached.
   if (
-    !request.nextUrl.pathname.startsWith('/cart')
+    !pathname.startsWith('/admin')
+    && !request.nextUrl.pathname.startsWith('/cart')
     && !request.nextUrl.pathname.startsWith('/success')
     && !request.nextUrl.pathname.startsWith('/cancel')
   ) {

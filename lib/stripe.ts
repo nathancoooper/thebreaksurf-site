@@ -1,17 +1,25 @@
-type StripeClient = import('stripe').default;
+import Stripe from 'stripe';
 
-let _stripe: Promise<StripeClient> | null = null;
+let _stripe: Stripe | null = null;
 
-// Dynamic import keeps the 18MB Stripe SDK out of the worker's cold-start
-// module evaluation. A top-level `import Stripe from 'stripe'` would parse and
-// execute the whole package every time the isolate boots, blowing the free
-// tier's ~10ms CPU budget (the origin of intermittent 503/1102s). It's only
-// loaded on first use, then cached. Callers must `await getStripe()`.
-export function getStripe(): Promise<StripeClient> {
+export function getStripe(): Stripe {
   if (!_stripe) {
-    _stripe = import('stripe').then(m => new m.default(process.env.STRIPE_SECRET_KEY!, {
+    _stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
       apiVersion: '2026-08-26.dahlia',
-    }));
+      // On Cloudflare Workers the Node `nodejs_compat` shim can make the
+      // SDK pick Node's http client, which fails to reach api.stripe.com.
+      // Force the fetch-based client so outbound requests use fetch().
+      httpClient: Stripe.createFetchHttpClient(),
+    });
   }
   return _stripe;
 }
+
+// Backwards compat - lazy proxy that defers initialization
+export const stripe = new Proxy({} as unknown as Stripe, {
+  get(_, prop, receiver) {
+    const target = getStripe();
+    const value = Reflect.get(target, prop, receiver);
+    return typeof value === 'function' ? value.bind(target) : value;
+  },
+});

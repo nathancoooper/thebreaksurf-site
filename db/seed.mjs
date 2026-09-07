@@ -41,6 +41,14 @@ for (const t of ['settings', 'stock_snapshot']) {
     n++;
   }
 }
+// Admin users (bcrypt hashes carry over untouched).
+for (const r of await load('users')) {
+  await db.execute(
+    'INSERT INTO users (id, data) VALUES (?, ?) ON DUPLICATE KEY UPDATE data = VALUES(data)',
+    [r.id, r.data],
+  );
+  n++;
+}
 
 await db.end();
 console.log(`seeded ${n} rows`);

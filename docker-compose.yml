@@ -41,6 +41,34 @@ services:
       db:
         condition: service_healthy
 
+  # Admin panel: same image, separate runtime. Shares the database and
+  # volumes with web; nginx routes admin.thebreaksurf.co.uk here.
+  admin:
+    build:
+      context: .
+      args:
+        NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-https://thebreaksurf.co.uk}
+        NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY:-pk_live_placeholder}
+    restart: unless-stopped
+    expose:
+      - "3000"
+    env_file:
+      - .env.production
+    environment:
+      DB_HOST: db
+      DB_NAME: ${DB_NAME:-thebreaksite}
+      DB_USER: ${DB_USER:-tbs}
+      DB_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD}
+      BLOBS_DIR: /app/public/images/uploads
+    volumes:
+      - tbs_data:/app/data
+      - tbs_uploads:/app/public/images/uploads
+      - tbs_content:/app/content/posts
+      - tbs_backups:/app/backups
+    depends_on:
+      db:
+        condition: service_healthy
+
   nginx:
     image: nginx:alpine
     restart: unless-stopped
