@@ -29,7 +29,9 @@
     "stripe": "^22.6.0",
     "unist-util-visit": "^5.1.0",
     "wrangler": "^4.127.0",
-    "mysql2": "^3.11.0"
+    "mysql2": "^3.11.0",
+    "@emnapi/runtime": "^1.11.3",
+    "@emnapi/core": "^1.11.3"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260827.1",
@@ -42,9 +44,5 @@
     "eslint-config-next": "16.2.9",
     "tailwindcss": "^4",
     "typescript": "^5"
-  },
-  "optionalDependencies": {
-    "@emnapi/runtime": "^1.11.3",
-    "@emnapi/core": "^1.11.3"
   }
 }
