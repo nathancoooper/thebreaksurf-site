@@ -45,6 +45,8 @@ services:
     image: nginx:alpine
     restart: unless-stopped
     ports:
+      # 80 = Cloudflare origin traffic, 3000 = direct staging access
+      - "80:80"
       - "3000:80"
     volumes:
       - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
