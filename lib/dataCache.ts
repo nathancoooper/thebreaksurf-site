@@ -34,7 +34,7 @@ export async function deleteData(table: string, id: string): Promise<void> {
 // For settings-style tables (key-value store)
 export async function readSetting<T>(table: string, key: string): Promise<T | null> {
   const db = getDb();
-  const row = await db.prepare(`SELECT value FROM ${table} WHERE key = ?`)
+  const row = await db.prepare(`SELECT value FROM ${table} WHERE \`key\` = ?`)
     .bind(key)
     .first<{ value: string }>();
   return row ? JSON.parse(row.value) as T : null;
@@ -43,7 +43,7 @@ export async function readSetting<T>(table: string, key: string): Promise<T | nu
 export async function writeSetting(table: string, key: string, value: unknown): Promise<void> {
   const db = getDb();
   await db.prepare(
-    `INSERT INTO ${table} (key, value) VALUES (?, ?) ON DUPLICATE KEY UPDATE value = ?, updated_at = NOW()`
+    `INSERT INTO ${table} (\`key\`, value) VALUES (?, ?) ON DUPLICATE KEY UPDATE value = ?, updated_at = NOW()`
   )
     .bind(key, JSON.stringify(value), JSON.stringify(value))
     .run();

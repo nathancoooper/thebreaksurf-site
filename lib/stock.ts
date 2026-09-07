@@ -24,7 +24,7 @@ async function readSnapshot(): Promise<StockSnapshot> {
 async function writeSnapshot(snapshot: StockSnapshot): Promise<void> {
   const db = getDb();
   await db.prepare(
-    "INSERT INTO stock_snapshot (key, value) VALUES ('snapshot', ?) ON DUPLICATE KEY UPDATE value = ?, updated_at = NOW()"
+    "INSERT INTO stock_snapshot (`key`, value) VALUES ('snapshot', ?) ON DUPLICATE KEY UPDATE value = ?, updated_at = NOW()"
   )
     .bind(JSON.stringify(snapshot), JSON.stringify(snapshot))
     .run();
@@ -32,7 +32,7 @@ async function writeSnapshot(snapshot: StockSnapshot): Promise<void> {
 
 async function stockCheckEnabled(): Promise<boolean> {
   const db = getDb();
-  const row = await db.prepare("SELECT value FROM settings WHERE key = 'stockCheckEnabled'")
+  const row = await db.prepare("SELECT value FROM settings WHERE `key` = 'stockCheckEnabled'")
     .first<{ value: string }>();
   return row ? JSON.parse(row.value) === true : false;
 }
