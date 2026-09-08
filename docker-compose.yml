@@ -69,6 +69,21 @@ services:
       db:
         condition: service_healthy
 
+  # Password-vault file engine (full WebDAV incl. PROPFIND — nginx's own
+  # dav module can't do PROPFIND on this build). Internal only; edge
+  # nginx holds the basic-auth gate + fail2ban logging.
+  vault:
+    image: sigoden/dufs:latest
+    restart: unless-stopped
+    command: /data -p 5000 --allow-all
+    expose:
+      - "5000"
+    networks:
+      - default
+      - tbs_edge
+    volumes:
+      - /srv/webdav:/data:rw
+
   nginx:
     image: nginx:alpine
     restart: unless-stopped
