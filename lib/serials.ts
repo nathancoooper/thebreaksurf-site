@@ -116,7 +116,7 @@ export async function markPrinted(serialNames: string[]): Promise<number> {
       .first();
     if (!existing) added += 1;
     await db.prepare(
-      'INSERT INTO tag_prints (serial, printed_at) VALUES (?, ?) ON CONFLICT(serial) DO UPDATE SET printed_at = ?'
+      'INSERT INTO tag_prints (serial, printed_at) VALUES (?, ?) ON DUPLICATE KEY UPDATE printed_at = ?'
     )
       .bind(name, now, now)
       .run();
