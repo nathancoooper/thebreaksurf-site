@@ -57,10 +57,10 @@ export async function listSlotsWithCounts(): Promise<PickupSlotWithCount[]> {
   return slots.map(s => ({ ...s, booked: counts[s.id] ?? 0 }));
 }
 
-/** Slots starting within the next 7 days (future only), with remaining places. */
+/** Slots starting within the next 28 days (future only), with remaining places. */
 export async function upcomingSlots(): Promise<(PickupSlotWithCount & { remaining: number })[]> {
   const now = new Date();
-  const horizon = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+  const horizon = new Date(now.getTime() + 28 * 24 * 60 * 60 * 1000);
   const slots = await listSlotsWithCounts();
   return slots
     .filter(s => {

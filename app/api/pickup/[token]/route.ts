@@ -12,7 +12,8 @@ export async function GET(
   if (!submission) return NextResponse.json({ error: 'Link not recognised' }, { status: 404 });
 
   const now = new Date();
-  const horizon = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+  // 28-day horizon backs the paged week view (client shows 7 days at a time).
+  const horizon = new Date(now.getTime() + 28 * 24 * 60 * 60 * 1000);
   const [slots, counts] = await Promise.all([listSlots(), slotBookingCounts()]);
   const upcoming = slots
     .filter(s => {
