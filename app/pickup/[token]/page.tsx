@@ -150,7 +150,7 @@ export default function PickupPage({ params }: { params: Promise<{ token: string
         ) : done ? (
           <div className="mx-auto max-w-lg rounded-sm border border-charcoal/10 bg-white p-10 text-center">
             <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-forest text-xl text-cream">✓</div>
-            <h1 className="mt-4 font-display text-2xl font-medium text-charcoal">You&apos;re booked in</h1>
+            <h1 className="mt-4 text-2xl font-bold tracking-tight text-charcoal">You&apos;re booked in</h1>
             <p className="mt-2 text-sm text-gray-600">
               {fmtLong(done.startsAt)} · {fmtTime(done.startsAt)} – {fmtTime(done.endsAt)}
               {done.note ? ` · ${done.note}` : ''}
@@ -162,7 +162,7 @@ export default function PickupPage({ params }: { params: Promise<{ token: string
             {/* ── Event details (cal.com left rail) ── */}
             <div>
               <p className="text-xs font-medium uppercase tracking-[0.25em] text-charcoal/40">{data.studentName}</p>
-              <h1 className="mt-2 font-display text-2xl font-medium text-charcoal">Pick up your garment</h1>
+              <h1 className="mt-2 text-2xl font-bold tracking-tight text-charcoal">Pick up your garment</h1>
               <p className="mt-2 text-sm leading-relaxed text-charcoal/60">
                 Your <strong className="font-medium text-charcoal">{data.garment}</strong> is ready.
               </p>
@@ -181,7 +181,7 @@ export default function PickupPage({ params }: { params: Promise<{ token: string
             <div className="grid gap-6 sm:grid-cols-2">
               <div>
                 <div className="mb-2 flex items-center justify-between">
-                  <p className="font-display text-lg font-medium text-charcoal">
+                  <p className="text-lg font-bold tracking-tight text-charcoal">
                     {new Date(monthCursor.y, monthCursor.m, 1).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}
                   </p>
                   <div className="flex gap-2">
@@ -224,7 +224,7 @@ export default function PickupPage({ params }: { params: Promise<{ token: string
               </div>
 
               <div>
-                <p className="mb-2 font-display text-lg font-medium text-charcoal">
+                <p className="mb-2 text-lg font-bold tracking-tight text-charcoal">
                   {selectedDay
                     ? new Date(selectedDay + 'T12:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })
                     : 'Pick a day'}
