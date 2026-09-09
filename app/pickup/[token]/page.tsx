@@ -22,39 +22,25 @@ interface PickupData {
   slots: SlotOption[];
 }
 
-const GRID_START_MIN = 8 * 60;
-const GRID_END_MIN = 20 * 60;
-const GRID_TOTAL_MIN = GRID_END_MIN - GRID_START_MIN;
-const GRID_HOURS = GRID_TOTAL_MIN / 60;
-const GUTTER_PX = 48;
-const COL_MIN_PX = 96;
-const MAX_WEEK_OFFSET = 3;
-
 function dayKey(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
-
-function mondayOfWeek(offset: number) {
-  const now = new Date();
-  const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7) + offset * 7);
-  return monday;
 }
 
 function fmtTime(iso: string) {
   return new Date(iso).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
 }
 
-function mins(iso: string) {
-  const d = new Date(iso);
-  return d.getHours() * 60 + d.getMinutes();
+function fmtLong(iso: string) {
+  return new Date(iso).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
 }
 
 export default function PickupPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = use(params);
   const [data, setData] = useState<PickupData | null>(null);
   const [invalid, setInvalid] = useState(false);
-  const [weekOffset, setWeekOffset] = useState(0);
+  const now = useMemo(() => new Date(), []);
+  const [monthCursor, setMonthCursor] = useState(() => ({ y: now.getFullYear(), m: now.getMonth() }));
+  const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [done, setDone] = useState<SlotOption | null>(null);
@@ -66,38 +52,55 @@ export default function PickupPage({ params }: { params: Promise<{ token: string
       .then(d => {
         if (!d) { setInvalid(true); return; }
         setData(d);
-        if (d.currentSlotId) setSelected(d.currentSlotId);
+        if (d.currentSlotId) {
+          setSelected(d.currentSlotId);
+          const mine = (d.slots as SlotOption[]).find((s: SlotOption) => s.id === d.currentSlotId);
+          if (mine) {
+            const dt = new Date(mine.startsAt);
+            setMonthCursor({ y: dt.getFullYear(), m: dt.getMonth() });
+            setSelectedDay(dayKey(dt));
+          }
+        }
       })
       .catch(() => setInvalid(true));
   }, [token]);
 
-  const week = useMemo(() => {
-    const monday = mondayOfWeek(weekOffset);
-    return Array.from({ length: 7 }, (_, i) => { const d = new Date(monday); d.setDate(d.getDate() + i); return d; });
-  }, [weekOffset]);
+  // Days in the visible month that have at least one bookable (or mine) future slot.
+  const { cells, availableDays, daySlots } = useMemo(() => {
+    const { y, m } = monthCursor;
+    const first = new Date(y, m, 1);
+    const lead = (first.getDay() + 6) % 7; // Mon-first offset
+    const daysInMonth = new Date(y, m + 1, 0).getDate();
+    const cells: (Date | null)[] = [];
+    for (let i = 0; i < lead; i++) cells.push(null);
+    for (let d = 1; d <= daysInMonth; d++) cells.push(new Date(y, m, d));
+    while (cells.length % 7 !== 0) cells.push(null);
 
-  const slotsByDay = useMemo(() => {
+    const available = new Set<string>();
     const byDay = new Map<string, SlotOption[]>();
     const t = new Date();
     for (const s of data?.slots ?? []) {
-      if (new Date(s.startsAt) < t) continue;
-      if (mins(s.startsAt) >= GRID_END_MIN || mins(s.endsAt) <= GRID_START_MIN) continue;
-      const k = dayKey(new Date(s.startsAt));
+      const start = new Date(s.startsAt);
+      if (start < t) continue;
+      const k = dayKey(start);
       if (!byDay.has(k)) byDay.set(k, []);
       byDay.get(k)!.push(s);
+      if (s.remaining > 0 || s.mine) available.add(k);
     }
     for (const list of byDay.values()) list.sort((a, b) => a.startsAt.localeCompare(b.startsAt));
-    return byDay;
-  }, [data]);
+    return { cells, availableDays: available, daySlots: byDay };
+  }, [monthCursor, data]);
 
-  const todayKey = dayKey(new Date());
-  const hourRows = Array.from({ length: GRID_HOURS }, (_, i) => GRID_START_MIN / 60 + i);
+  const horizonMonth = useMemo(() => {
+    const h = new Date(now.getTime() + 28 * 24 * 60 * 60 * 1000);
+    return { y: h.getFullYear(), m: h.getMonth() };
+  }, [now]);
+  const canPrev = monthCursor.y > now.getFullYear() || (monthCursor.y === now.getFullYear() && monthCursor.m > now.getMonth());
+  const canNext = monthCursor.y < horizonMonth.y || (monthCursor.y === horizonMonth.y && monthCursor.m < horizonMonth.m);
+
+  const visibleSlots = (selectedDay && daySlots.get(selectedDay)) || [];
+  const selectedSlot = data?.slots.find(s => s.id === selected) ?? null;
   const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-
-  const monthLabel = useMemo(() => {
-    const fmt = (d: Date) => d.toLocaleDateString('en-GB', { month: 'long' });
-    return fmt(week[0]) === fmt(week[6]) ? `${fmt(week[0])} ${week[6].getFullYear()}` : `${fmt(week[0])} – ${fmt(week[6])} ${week[6].getFullYear()}`;
-  }, [week]);
 
   async function confirm() {
     if (!selected || !data) return;
@@ -113,10 +116,6 @@ export default function PickupPage({ params }: { params: Promise<{ token: string
     setDone(data.slots.find(s => s.id === selected) ?? null);
   }
 
-  const selectedSlot = data?.slots.find(s => s.id === selected) ?? null;
-  const currentSlot = data?.slots.find(s => s.id === data.currentSlotId) ?? null;
-  const gridCols = `${GUTTER_PX}px repeat(7, minmax(${COL_MIN_PX}px, 1fr))`;
-
   return (
     <div className="flex min-h-dvh flex-col bg-cream">
       {/* ── Functional header (no nav, no cart) ── */}
@@ -125,165 +124,146 @@ export default function PickupPage({ params }: { params: Promise<{ token: string
           The Break × AUB
         </p>
       </header>
-      <div className="mx-auto w-full max-w-7xl flex-1 px-4 py-6">
-      <div className="flex flex-col gap-4 lg:h-[calc(100dvh-57px-3rem)] lg:flex-row lg:overflow-hidden">
-
-        {/* ── Sidebar ─────────────────────────────── */}
-        <aside className="w-full shrink-0 rounded-sm border border-charcoal/10 bg-white p-6 lg:w-64 lg:overflow-y-auto">
-          <p className="text-xs font-medium uppercase tracking-[0.25em] text-charcoal/40">Pick-up</p>
-          <h1 className="mt-2 font-display text-2xl font-medium text-charcoal">Pick up your garment</h1>
-          {data && !done && (
-            <p className="mt-3 text-sm leading-relaxed text-charcoal/60">
-              Hi {data.studentName} — your <strong className="font-medium text-charcoal">{data.garment}</strong> is ready. Tap a green window.
+      <div className="mx-auto w-full max-w-4xl flex-1 px-4 py-10">
+        {invalid ? (
+          <p className="rounded-sm border border-charcoal/10 bg-white p-8 text-sm text-charcoal/60">
+            This pick-up link isn&apos;t recognised. Ask us for a fresh one.
+          </p>
+        ) : !data ? (
+          <p className="text-sm text-charcoal/50">Loading…</p>
+        ) : done ? (
+          <div className="mx-auto max-w-lg rounded-sm border border-charcoal/10 bg-white p-10 text-center">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-forest text-xl text-cream">✓</div>
+            <h1 className="mt-4 font-display text-2xl font-medium text-charcoal">You&apos;re booked in</h1>
+            <p className="mt-2 text-sm text-gray-600">
+              {fmtLong(done.startsAt)} · {fmtTime(done.startsAt)} – {fmtTime(done.endsAt)}
+              {done.note ? ` · ${done.note}` : ''}
             </p>
-          )}
-          {currentSlot && !done && (
-            <p className="mt-3 rounded-sm bg-moss/10 px-3 py-2 text-xs leading-relaxed text-forest">
-              Booked: {new Date(currentSlot.startsAt).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}
-              {' '}{fmtTime(currentSlot.startsAt)} — picking a new time moves it.
-            </p>
-          )}
-          <div className="mt-4 space-y-1.5 border-t border-charcoal/10 pt-4 text-xs text-charcoal/60">
-            <p className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-sm bg-moss/40" /> Available</p>
-            <p className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-sm bg-terra/50" /> Your booking</p>
-            <p className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-sm bg-charcoal/10" /> Full</p>
-            <p className="pt-1 text-charcoal/40">🌍 {tz}</p>
+            <p className="mt-1 text-xs text-gray-400">Bring your name — we&apos;ll have your {data.garment} ready.</p>
           </div>
-        </aside>
-
-        {/* ── Week view ───────────────────────────── */}
-        <main className="flex min-h-0 min-w-0 flex-1 flex-col">
-          {invalid ? (
-            <p className="rounded-xl bg-white p-8 text-sm text-gray-600 shadow-sm">
-              This pick-up link isn&apos;t recognised. Ask us for a fresh one.
-            </p>
-          ) : !data ? (
-            <p className="text-sm text-forest/60">Loading your calendar…</p>
-          ) : done ? (
-            <div className="mx-auto max-w-lg rounded-xl bg-white p-10 text-center shadow-sm">
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-forest text-xl text-cream">✓</div>
-              <h2 className="mt-4 text-xl font-semibold text-gray-900">You&apos;re booked in</h2>
-              <p className="mt-2 text-sm text-gray-600">
-                {new Date(done.startsAt).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}
-                {' '}· {fmtTime(done.startsAt)} – {fmtTime(done.endsAt)}
-                {done.note ? ` · ${done.note}` : ''}
+        ) : (
+          <div className="grid gap-6 rounded-sm border border-charcoal/10 bg-white p-6 md:grid-cols-[240px_1fr] md:p-8">
+            {/* ── Event details (cal.com left rail) ── */}
+            <div>
+              <p className="text-xs font-medium uppercase tracking-[0.25em] text-charcoal/40">Pick-up</p>
+              <h1 className="mt-2 font-display text-2xl font-medium text-charcoal">Pick up your garment</h1>
+              <p className="mt-2 text-sm leading-relaxed text-charcoal/60">
+                Hi {data.studentName} — your <strong className="font-medium text-charcoal">{data.garment}</strong> is ready.
               </p>
-              <p className="mt-1 text-xs text-gray-400">Bring your name — we&apos;ll have your {data.garment} ready.</p>
-            </div>
-          ) : (
-            <>
-              <div className="flex shrink-0 flex-wrap items-center justify-between gap-3">
-                <h2 className="font-display text-4xl font-medium text-charcoal">{monthLabel}</h2>
-                <div className="flex items-center gap-2">
-                  <button onClick={() => setWeekOffset(o => Math.max(0, o - 1))} disabled={weekOffset === 0}
-                    aria-label="Previous week" className="rounded-sm border border-charcoal/20 px-3 py-1.5 text-sm text-charcoal transition-colors hover:border-charcoal/50 disabled:opacity-30">‹</button>
-                  <button onClick={() => setWeekOffset(0)}
-                    className="rounded-sm border border-charcoal/20 px-4 py-1.5 text-sm font-medium text-charcoal transition-colors hover:border-charcoal/50">This week</button>
-                  <button onClick={() => setWeekOffset(o => Math.min(MAX_WEEK_OFFSET, o + 1))} disabled={weekOffset === MAX_WEEK_OFFSET}
-                    aria-label="Next week" className="rounded-sm border border-charcoal/20 px-3 py-1.5 text-sm text-charcoal transition-colors hover:border-charcoal/50 disabled:opacity-30">›</button>
-                </div>
-              </div>
-
-              {error && <p className="mt-2 shrink-0 text-sm text-red-600">{error}</p>}
-
-              {/* Calendar grid — fills available height on desktop, scrolls on small screens */}
-              <div className="mt-3 min-h-0 flex-1 overflow-x-auto rounded-sm border border-charcoal/10 bg-white lg:overflow-hidden">
-                <div className="flex h-full min-h-[480px] min-w-[760px] flex-col">
-                  {/* Day headers */}
-                  <div className="grid shrink-0" style={{ gridTemplateColumns: gridCols }}>
-                    <div />
-                    {week.map(d => {
-                      const isToday = dayKey(d) === todayKey;
-                      return (
-                        <div key={d.toISOString()} className="px-1 py-2 text-center text-sm">
-                          <span className="text-forest/70">{d.toLocaleDateString('en-GB', { weekday: 'short' })} </span>
-                          {isToday
-                            ? <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-[#C4622D] font-semibold text-white">{d.getDate()}</span>
-                            : <span className="text-forest">{d.getDate()}</span>}
-                        </div>
-                      );
-                    })}
-                  </div>
-                  {/* Time body — hour rows share height equally, slots positioned by % */}
-                  <div className="grid min-h-0 flex-1" style={{ gridTemplateColumns: gridCols }}>
-                    {/* Gutter */}
-                    <div className="flex flex-col">
-                      {hourRows.map(h => (
-                        <div key={h} className="relative flex-1 border-t border-forest/10 first:border-t-0">
-                          <span className="absolute -top-2 right-1 bg-white pr-0.5 text-[10px] text-forest/40">
-                            {String(h).padStart(2, '0')}:00
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                    {/* Day columns */}
-                    {week.map(d => {
-                      const k = dayKey(d);
-                      const isToday = k === todayKey;
-                      return (
-                        <div key={d.toISOString()} className={`relative border-l border-forest/10 ${isToday ? 'bg-forest/[0.04]' : ''}`}>
-                          <div className="absolute inset-0 flex flex-col">
-                            {hourRows.map(h => (
-                              <div key={h} className="flex-1 border-t border-forest/10 first:border-t-0" />
-                            ))}
-                          </div>
-                          {(slotsByDay.get(k) ?? []).map(s => {
-                            const topPct = Math.max(0, (mins(s.startsAt) - GRID_START_MIN) / GRID_TOTAL_MIN * 100);
-                            const heightPct = Math.max(4, (mins(s.endsAt) - mins(s.startsAt)) / GRID_TOTAL_MIN * 100);
-                            const full = s.remaining <= 0 && !s.mine;
-                            const active = selected === s.id;
-                            return (
-                              <button
-                                key={s.id}
-                                disabled={full}
-                                onClick={() => setSelected(s.id)}
-                                className={`absolute left-0 right-0 overflow-hidden px-1.5 py-1 text-left text-[11px] leading-tight ${
-                                  active ? 'bg-forest text-cream'
-                                    : full ? 'cursor-not-allowed bg-charcoal/5 text-charcoal/30'
-                                    : s.mine ? 'bg-terra/25 text-charcoal ring-1 ring-inset ring-terra'
-                                    : 'bg-moss/20 text-forest hover:bg-moss/30'
-                                }`}
-                                style={{ top: `${topPct}%`, height: `${heightPct}%` }}
-                                title={s.note ?? ''}
-                              >
-                                <span className="font-semibold">{fmtTime(s.startsAt)}–{fmtTime(s.endsAt)}</span>
-                                <span className="block opacity-75">
-                                  {s.mine ? 'yours ✓' : full ? 'full' : `${s.remaining} left`}{s.note ? ` · ${s.note}` : ''}
-                                </span>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-
-              {/* Confirm bar */}
-              <div className="mt-3 flex shrink-0 items-center justify-between gap-3 rounded-sm bg-forest px-5 py-3.5 text-cream">
-                <p className="text-sm">
-                  {selectedSlot ? (
-                    <>
-                      <strong>
-                        {new Date(selectedSlot.startsAt).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}
-                        {' '}{fmtTime(selectedSlot.startsAt)}–{fmtTime(selectedSlot.endsAt)}
-                      </strong>
-                      {selectedSlot.note ? <span className="opacity-70"> · {selectedSlot.note}</span> : null}
-                    </>
-                  ) : (
-                    <span className="opacity-70">Tap a green window above</span>
-                  )}
+              <div className="mt-4 space-y-2 text-sm text-charcoal/60">
+                <p className="flex items-center gap-2">
+                  <span aria-hidden>🕒</span> 1 hour windows
                 </p>
-                <button onClick={confirm} disabled={!selected || saving}
-                  className="shrink-0 rounded-sm border border-cream/30 px-8 py-2.5 text-sm font-medium text-cream transition-all hover:border-cream/70 hover:bg-cream/10 disabled:opacity-50">
-                  {saving ? 'Booking…' : data.currentSlotId ? 'Change my slot' : 'Confirm slot'}
+                <p className="flex items-center gap-2">
+                  <span aria-hidden>📍</span> Shown per slot
+                </p>
+                <p className="flex items-center gap-2">
+                  <span aria-hidden>🌍</span> {tz}
+                </p>
+              </div>
+              {data.currentSlotId && !done && (
+                <p className="mt-4 rounded-sm bg-moss/10 px-3 py-2 text-xs leading-relaxed text-forest">
+                  You already have a booking — picking a new time moves it.
+                </p>
+              )}
+            </div>
+
+            {/* ── Month + times ── */}
+            <div className="grid gap-6 sm:grid-cols-2">
+              <div>
+                <div className="mb-2 flex items-center justify-between">
+                  <p className="font-display text-lg font-medium text-charcoal">
+                    {new Date(monthCursor.y, monthCursor.m, 1).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}
+                  </p>
+                  <div className="flex gap-2">
+                    <button onClick={() => setMonthCursor(c => ({ y: c.m === 0 ? c.y - 1 : c.y, m: (c.m + 11) % 12 }))}
+                      disabled={!canPrev} aria-label="Previous month"
+                      className="rounded-sm border border-charcoal/20 px-2.5 py-0.5 text-charcoal transition-colors hover:border-charcoal/50 disabled:opacity-30">‹</button>
+                    <button onClick={() => setMonthCursor(c => ({ y: c.m === 11 ? c.y + 1 : c.y, m: (c.m + 1) % 12 }))}
+                      disabled={!canNext} aria-label="Next month"
+                      className="rounded-sm border border-charcoal/20 px-2.5 py-0.5 text-charcoal transition-colors hover:border-charcoal/50 disabled:opacity-30">›</button>
+                  </div>
+                </div>
+                <div className="grid grid-cols-7 text-center text-[11px] font-medium text-charcoal/40">
+                  {['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'].map(d => <div key={d} className="py-1">{d}</div>)}
+                </div>
+                <div className="grid grid-cols-7 text-center text-sm">
+                  {cells.map((d, i) => {
+                    if (!d) return <div key={`x${i}`} />;
+                    const k = dayKey(d);
+                    const isPast = d < new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                    const open = availableDays.has(k) && !isPast;
+                    const active = selectedDay === k;
+                    return (
+                      <button
+                        key={k}
+                        disabled={!open}
+                        onClick={() => { setSelectedDay(k); setSelected(null); }}
+                        className={`mx-auto my-0.5 flex h-9 w-9 items-center justify-center rounded-sm transition-colors ${
+                          active
+                            ? 'bg-forest font-semibold text-cream'
+                            : open
+                              ? 'font-medium text-charcoal hover:bg-charcoal/5'
+                              : 'text-charcoal/25'
+                        }`}
+                      >
+                        {d.getDate()}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div>
+                <p className="mb-2 font-display text-lg font-medium text-charcoal">
+                  {selectedDay
+                    ? new Date(selectedDay + 'T12:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })
+                    : 'Pick a day'}
+                </p>
+                {!selectedDay ? (
+                  <p className="text-sm text-charcoal/50">Available days are shown in dark.</p>
+                ) : visibleSlots.length === 0 ? (
+                  <p className="text-sm text-charcoal/50">Nothing bookable this day.</p>
+                ) : (
+                  <div className="max-h-72 space-y-2 overflow-y-auto pr-1">
+                    {visibleSlots.map(s => {
+                      const full = s.remaining <= 0 && !s.mine;
+                      const active = selected === s.id;
+                      return (
+                        <button
+                          key={s.id}
+                          disabled={full}
+                          onClick={() => setSelected(s.id)}
+                          className={`w-full rounded-sm border px-3 py-2.5 text-sm transition-colors ${
+                            active
+                              ? 'border-forest bg-forest text-cream'
+                              : full
+                                ? 'cursor-not-allowed border-charcoal/10 bg-charcoal/5 text-charcoal/30'
+                                : 'border-charcoal/20 bg-white text-charcoal hover:border-charcoal/60'
+                          }`}
+                        >
+                          <span className="font-medium">{fmtTime(s.startsAt)} – {fmtTime(s.endsAt)}</span>
+                          <span className={`ml-2 text-xs ${active ? 'text-cream/70' : 'text-charcoal/40'}`}>
+                            {s.mine ? '· yours' : full ? '· full' : `· ${s.remaining} left`}
+                          </span>
+                          {s.note && <span className={`block text-xs ${active ? 'text-cream/70' : 'text-charcoal/40'}`}>{s.note}</span>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+                {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
+                <button
+                  onClick={confirm}
+                  disabled={!selected || saving}
+                  className="mt-3 w-full rounded-sm border border-forest bg-forest py-2.5 text-sm font-medium text-cream transition-all hover:bg-moss disabled:opacity-40"
+                >
+                  {saving ? 'Booking…' : data.currentSlotId ? 'Change my slot' : 'Confirm'}
                 </button>
               </div>
-            </>
-          )}
-        </main>
-      </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
