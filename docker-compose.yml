@@ -90,6 +90,7 @@ services:
     ports:
       # 80 = Cloudflare origin traffic, 3000 = direct staging access
       - "80:80"
+      - "443:443"
       - "3000:80"
     networks:
       - default
@@ -100,8 +101,9 @@ services:
       # Password vault (host paths, not Docker volumes — survives compose changes)
       - /srv/keeweb:/srv/keeweb:ro
       - /srv/webdav:/srv/webdav:rw
-      - /srv/acme:/var/www/acme
+      - /srv/acme-root:/var/www/acme-root
       - /srv/nginx-logs:/var/log/nginx
+      - /etc/letsencrypt:/etc/letsencrypt:ro
     depends_on:
       - web
 
