@@ -24,7 +24,9 @@ interface PickupData {
 
 const GRID_START_MIN = 8 * 60;
 const GRID_END_MIN = 20 * 60;
-const HOUR_PX = 56;
+const GRID_HOURS = (GRID_END_MIN - GRID_START_MIN) / 60;
+const GUTTER = 44;
+const COL = 104;
 const MAX_WEEK_OFFSET = 3;
 
 function dayKey(d: Date) {
@@ -42,7 +44,7 @@ function fmtTime(iso: string) {
   return new Date(iso).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
 }
 
-function minutesSinceMidnight(iso: string) {
+function mins(iso: string) {
   const d = new Date(iso);
   return d.getHours() * 60 + d.getMinutes();
 }
@@ -52,7 +54,6 @@ export default function PickupPage({ params }: { params: Promise<{ token: string
   const [data, setData] = useState<PickupData | null>(null);
   const [invalid, setInvalid] = useState(false);
   const [weekOffset, setWeekOffset] = useState(0);
-  const [focusedDay, setFocusedDay] = useState<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [done, setDone] = useState<SlotOption | null>(null);
@@ -71,40 +72,36 @@ export default function PickupPage({ params }: { params: Promise<{ token: string
 
   const week = useMemo(() => {
     const monday = mondayOfWeek(weekOffset);
-    return Array.from({ length: 7 }, (_, i) => {
-      const d = new Date(monday);
-      d.setDate(d.getDate() + i);
-      return d;
-    });
+    return Array.from({ length: 7 }, (_, i) => { const d = new Date(monday); d.setDate(d.getDate() + i); return d; });
   }, [weekOffset]);
 
-  // Bookable future slots, grouped by day; days with any availability flagged.
-  const { slotsByDay, openDays } = useMemo(() => {
+  const slotsByDay = useMemo(() => {
     const byDay = new Map<string, SlotOption[]>();
-    const open = new Set<string>();
     const t = new Date();
     for (const s of data?.slots ?? []) {
-      const start = new Date(s.startsAt);
-      if (start < t) continue;
-      if (minutesSinceMidnight(s.startsAt) >= GRID_END_MIN || minutesSinceMidnight(s.endsAt) <= GRID_START_MIN) continue;
-      const k = dayKey(start);
+      if (new Date(s.startsAt) < t) continue;
+      if (mins(s.startsAt) >= GRID_END_MIN || mins(s.endsAt) <= GRID_START_MIN) continue;
+      const k = dayKey(new Date(s.startsAt));
       if (!byDay.has(k)) byDay.set(k, []);
       byDay.get(k)!.push(s);
-      if (s.remaining > 0 || s.mine) open.add(k);
     }
     for (const list of byDay.values()) list.sort((a, b) => a.startsAt.localeCompare(b.startsAt));
-    return { slotsByDay: byDay, openDays: open };
+    return byDay;
   }, [data]);
 
   const todayKey = dayKey(new Date());
+  const hours = Array.from({ length: GRID_HOURS }, (_, i) => GRID_START_MIN / 60 + i);
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const hourPx = useMemo(() => {
+    if (typeof window === 'undefined') return 56;
+    const avail = Math.max(320, window.innerHeight - 200);
+    return Math.max(36, Math.min(72, avail / GRID_HOURS));
+  }, []);
 
   const monthLabel = useMemo(() => {
     const fmt = (d: Date) => d.toLocaleDateString('en-GB', { month: 'long' });
     return fmt(week[0]) === fmt(week[6]) ? `${fmt(week[0])} ${week[6].getFullYear()}` : `${fmt(week[0])} – ${fmt(week[6])} ${week[6].getFullYear()}`;
   }, [week]);
-
-  const hours = Array.from({ length: (GRID_END_MIN - GRID_START_MIN) / 60 }, (_, i) => GRID_START_MIN / 60 + i);
-  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
   async function confirm() {
     if (!selected || !data) return;
@@ -122,10 +119,12 @@ export default function PickupPage({ params }: { params: Promise<{ token: string
 
   const selectedSlot = data?.slots.find(s => s.id === selected) ?? null;
   const currentSlot = data?.slots.find(s => s.id === data.currentSlotId) ?? null;
+  const gridW = GUTTER + 7 * COL;
 
   return (
-    <div className="min-h-screen bg-cream">
-      <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-6 lg:flex-row">
+    <div className="h-screen overflow-hidden bg-cream">
+      <div className="mx-auto flex h-full max-w-7xl flex-col gap-4 px-4 py-6 lg:flex-row">
+
         {/* ── Sidebar ─────────────────────────────── */}
         <aside className="w-full shrink-0 rounded-xl bg-white p-5 shadow-sm lg:w-64">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-forest/50">The Break × AUB</p>
@@ -141,50 +140,6 @@ export default function PickupPage({ params }: { params: Promise<{ token: string
               {' '}{fmtTime(currentSlot.startsAt)} — picking a new time moves it.
             </p>
           )}
-
-          {/* Mini week */}
-          <div className="mt-5 border-t border-gray-100 pt-4">
-            <div className="mb-2 flex items-center justify-between">
-              <p className="text-sm font-semibold text-gray-900">This week</p>
-              <div className="flex gap-1">
-                <button onClick={() => setWeekOffset(o => Math.max(0, o - 1))} disabled={weekOffset === 0}
-                  aria-label="Previous week" className="rounded-full px-2 text-gray-500 hover:bg-gray-100 disabled:opacity-30">‹</button>
-                <button onClick={() => setWeekOffset(0)}
-                  className="rounded-full px-2 text-xs font-medium text-gray-500 hover:bg-gray-100">Today</button>
-                <button onClick={() => setWeekOffset(o => Math.min(MAX_WEEK_OFFSET, o + 1))} disabled={weekOffset === MAX_WEEK_OFFSET}
-                  aria-label="Next week" className="rounded-full px-2 text-gray-500 hover:bg-gray-100 disabled:opacity-30">›</button>
-              </div>
-            </div>
-            <div className="grid grid-cols-7 gap-0.5 text-center">
-              {week.map(d => {
-                const k = dayKey(d);
-                const isToday = k === todayKey;
-                const open = openDays.has(k);
-                const focused = focusedDay === k;
-                return (
-                  <button
-                    key={k}
-                    onClick={() => setFocusedDay(focused ? null : k)}
-                    className={`flex flex-col items-center rounded-md py-1.5 ${
-                      focused ? 'bg-forest text-cream' : 'hover:bg-gray-100'
-                    }`}
-                  >
-                    <span className={`text-[10px] font-medium ${focused ? 'text-cream/70' : 'text-gray-400'}`}>
-                      {d.toLocaleDateString('en-GB', { weekday: 'narrow' })}
-                    </span>
-                    <span className={`flex h-6 w-6 items-center justify-center rounded-full text-xs ${
-                      isToday && !focused ? 'bg-[#C4622D] font-semibold text-white' : focused ? 'font-semibold' : open ? 'font-medium text-gray-900' : 'text-gray-300'
-                    }`}>
-                      {d.getDate()}
-                    </span>
-                    {open && <span className={`h-1 w-1 rounded-full ${focused ? 'bg-cream' : 'bg-forest'}`} />}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Legend */}
           <div className="mt-4 space-y-1.5 border-t border-gray-100 pt-4 text-xs text-gray-500">
             <p className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-sm bg-forest/30" /> Available</p>
             <p className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-sm bg-[#C4622D]/40" /> Your booking</p>
@@ -194,7 +149,7 @@ export default function PickupPage({ params }: { params: Promise<{ token: string
         </aside>
 
         {/* ── Week view ───────────────────────────── */}
-        <main className="min-w-0 flex-1">
+        <main className="min-w-0 flex-1 flex flex-col">
           {invalid ? (
             <p className="rounded-xl bg-white p-8 text-sm text-gray-600 shadow-sm">
               This pick-up link isn&apos;t recognised. Ask us for a fresh one.
@@ -214,7 +169,7 @@ export default function PickupPage({ params }: { params: Promise<{ token: string
             </div>
           ) : (
             <>
-              <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex shrink-0 flex-wrap items-center justify-between gap-3">
                 <h2 className="text-3xl font-bold text-forest">{monthLabel}</h2>
                 <div className="flex items-center gap-1">
                   <button onClick={() => setWeekOffset(o => Math.max(0, o - 1))} disabled={weekOffset === 0}
@@ -226,50 +181,54 @@ export default function PickupPage({ params }: { params: Promise<{ token: string
                 </div>
               </div>
 
-              <div className="mt-3 overflow-x-auto rounded-xl bg-white shadow-sm">
-                <div className="min-w-[760px]">
-                  <div className="grid" style={{ gridTemplateColumns: '48px repeat(7, 1fr)' }}>
+              {error && <p className="mt-2 shrink-0 text-sm text-red-600">{error}</p>}
+
+              {/* Calendar grid — sized to fill remaining viewport */}
+              <div className="mt-3 min-h-0 flex-1 overflow-x-auto overflow-y-hidden">
+                <div style={{ width: gridW, height: hours.length * hourPx + 36 }}>
+                  {/* Day headers */}
+                  <div className="grid" style={{ gridTemplateColumns: `${GUTTER}px repeat(7, ${COL}px)` }}>
                     <div />
                     {week.map(d => {
                       const isToday = dayKey(d) === todayKey;
                       return (
-                        <div key={d.toISOString()} className="px-2 py-2 text-center text-sm">
+                        <div key={d.toISOString()} className="px-1 py-2 text-center text-sm">
                           <span className="text-forest/70">{d.toLocaleDateString('en-GB', { weekday: 'short' })} </span>
-                          {isToday ? (
-                            <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-[#C4622D] font-semibold text-white">{d.getDate()}</span>
-                          ) : (
-                            <span className="text-forest">{d.getDate()}</span>
-                          )}
+                          {isToday
+                            ? <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-[#C4622D] font-semibold text-white">{d.getDate()}</span>
+                            : <span className="text-forest">{d.getDate()}</span>}
                         </div>
                       );
                     })}
                   </div>
-                  <div className="grid border-y border-forest/10" style={{ gridTemplateColumns: '48px repeat(7, 1fr)' }}>
-                    <div className="px-1 py-1 text-[10px] text-forest/40">all-day</div>
+                  {/* All-day row */}
+                  <div className="grid" style={{ gridTemplateColumns: `${GUTTER}px repeat(7, ${COL}px)`, height: 24 }}>
+                    <div className="px-1 pt-1 text-[10px] text-forest/40">all-day</div>
                     {week.map(d => <div key={d.toISOString()} className="border-l border-forest/10" />)}
                   </div>
-                  <div className="grid" style={{ gridTemplateColumns: '48px repeat(7, 1fr)' }}>
-                    <div className="relative" style={{ height: hours.length * HOUR_PX }}>
+                  {/* Time body */}
+                  <div className="grid" style={{ gridTemplateColumns: `${GUTTER}px repeat(7, ${COL}px)`, height: hours.length * hourPx }}>
+                    {/* Gutter */}
+                    <div className="relative">
                       {hours.map(h => (
-                        <div key={h} className="absolute right-1 text-[10px] text-forest/40" style={{ top: (h - GRID_START_MIN / 60) * HOUR_PX - 7 }}>
-                          {String(h).padStart(2, '0')}:00
+                        <div key={h} className="absolute right-1 text-[10px] text-forest/40" style={{ top: h * hourPx - 7 }}>
+                          {String(h + GRID_START_MIN / 60).padStart(2, '0')}:00
                         </div>
                       ))}
                     </div>
+                    {/* Day columns */}
                     {week.map(d => {
                       const k = dayKey(d);
                       const isToday = k === todayKey;
-                      const focused = focusedDay === k;
                       return (
-                        <div key={d.toISOString()} className={`relative border-l border-forest/10 ${isToday ? 'bg-forest/[0.04]' : ''} ${focused ? 'bg-forest/[0.08]' : ''}`}
-                          style={{ height: hours.length * HOUR_PX }}>
+                        <div key={d.toISOString()} className={`relative border-l border-forest/10 ${isToday ? 'bg-forest/[0.04]' : ''}`}
+                          style={{ height: hours.length * hourPx }}>
                           {hours.map(h => (
-                            <div key={h} className="absolute left-0 right-0 border-t border-forest/10"
-                              style={{ top: (h - GRID_START_MIN / 60) * HOUR_PX }} />
+                            <div key={h} className="absolute left-0 right-0 border-t border-forest/10" style={{ top: h * hourPx }} />
                           ))}
                           {(slotsByDay.get(k) ?? []).map(s => {
-                            const top = Math.max(0, (minutesSinceMidnight(s.startsAt) - GRID_START_MIN) / 60 * HOUR_PX);
-                            const bottom = Math.min(hours.length * HOUR_PX, (minutesSinceMidnight(s.endsAt) - GRID_START_MIN) / 60 * HOUR_PX);
+                            const top = Math.max(0, (mins(s.startsAt) - GRID_START_MIN) / 60 * hourPx);
+                            const bottom = Math.min(hours.length * hourPx, (mins(s.endsAt) - GRID_START_MIN) / 60 * hourPx);
                             const full = s.remaining <= 0 && !s.mine;
                             const active = selected === s.id;
                             return (
@@ -278,15 +237,12 @@ export default function PickupPage({ params }: { params: Promise<{ token: string
                                 disabled={full}
                                 onClick={() => setSelected(s.id)}
                                 className={`absolute left-1 right-1 overflow-hidden rounded-md px-1.5 py-1 text-left text-[11px] leading-tight ${
-                                  active
-                                    ? 'bg-forest text-cream shadow'
-                                    : full
-                                      ? 'cursor-not-allowed bg-gray-100 text-gray-400'
-                                      : s.mine
-                                        ? 'bg-[#C4622D]/25 text-forest ring-1 ring-[#C4622D]'
-                                        : 'bg-forest/15 text-forest hover:bg-forest/25'
+                                  active ? 'bg-forest text-cream shadow'
+                                    : full ? 'cursor-not-allowed bg-gray-100 text-gray-400'
+                                    : s.mine ? 'bg-[#C4622D]/25 text-forest ring-1 ring-[#C4622D]'
+                                    : 'bg-forest/15 text-forest hover:bg-forest/25'
                                 }`}
-                                style={{ top, height: Math.max(30, bottom - top) }}
+                                style={{ top, height: Math.max(28, bottom - top) }}
                                 title={s.note ?? ''}
                               >
                                 <span className="font-semibold">{fmtTime(s.startsAt)}–{fmtTime(s.endsAt)}</span>
@@ -303,8 +259,8 @@ export default function PickupPage({ params }: { params: Promise<{ token: string
                 </div>
               </div>
 
-              {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
-              <div className="sticky bottom-4 mt-4 flex items-center justify-between gap-3 rounded-xl bg-forest px-5 py-3 text-cream shadow-lg">
+              {/* Confirm bar */}
+              <div className="mt-3 flex shrink-0 items-center justify-between gap-3 rounded-xl bg-forest px-5 py-3 text-cream shadow-lg">
                 <p className="text-sm">
                   {selectedSlot ? (
                     <>
