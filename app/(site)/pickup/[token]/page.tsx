@@ -197,11 +197,6 @@ export default function PickupPage({ params }: { params: Promise<{ token: string
                       );
                     })}
                   </div>
-                  {/* All-day row */}
-                  <div className="grid shrink-0 border-y border-forest/10" style={{ gridTemplateColumns: gridCols }}>
-                    <div className="px-1 py-1 text-[10px] text-forest/40">all-day</div>
-                    {week.map(d => <div key={d.toISOString()} className="border-l border-forest/10" />)}
-                  </div>
                   {/* Time body — hour rows share height equally, slots positioned by % */}
                   <div className="grid min-h-0 flex-1" style={{ gridTemplateColumns: gridCols }}>
                     {/* Gutter */}
