@@ -235,13 +235,13 @@ export default function PickupPage({ params }: { params: Promise<{ token: string
                                 key={s.id}
                                 disabled={full}
                                 onClick={() => setSelected(s.id)}
-                                className={`absolute left-1 right-1 overflow-hidden rounded-md px-1.5 py-1 text-left text-[11px] leading-tight ${
+                                className={`absolute left-0 right-0 overflow-hidden px-1.5 py-1 text-left text-[11px] leading-tight ${
                                   active ? 'bg-forest text-cream shadow'
                                     : full ? 'cursor-not-allowed bg-gray-100 text-gray-400'
-                                    : s.mine ? 'bg-[#C4622D]/25 text-forest ring-1 ring-[#C4622D]'
+                                    : s.mine ? 'bg-[#C4622D]/25 text-forest ring-1 ring-inset ring-[#C4622D]'
                                     : 'bg-forest/15 text-forest hover:bg-forest/25'
                                 }`}
-                                style={{ top: `${topPct}%`, height: `calc(${heightPct}% - 2px)` }}
+                                style={{ top: `${topPct}%`, height: `${heightPct}%` }}
                                 title={s.note ?? ''}
                               >
                                 <span className="font-semibold">{fmtTime(s.startsAt)}–{fmtTime(s.endsAt)}</span>
