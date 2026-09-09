@@ -118,8 +118,8 @@ export default function PickupPage({ params }: { params: Promise<{ token: string
   const gridW = GUTTER + 7 * COL;
 
   return (
-    <div className="min-h-screen bg-cream">
-      <div className="mx-auto flex h-full max-w-7xl flex-col gap-4 px-4 py-6 lg:flex-row">
+    <div className="flex h-dvh flex-col pt-[72px]">
+      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden bg-cream px-4 py-6 lg:flex-row lg:mx-auto lg:max-w-7xl lg:w-full">
 
         {/* ── Sidebar ─────────────────────────────── */}
         <aside className="w-full shrink-0 rounded-xl bg-white p-5 shadow-sm lg:w-64">
@@ -145,7 +145,7 @@ export default function PickupPage({ params }: { params: Promise<{ token: string
         </aside>
 
         {/* ── Week view ───────────────────────────── */}
-        <main className="min-w-0 flex-1 flex flex-col">
+        <main className="min-w-0 flex-1 flex flex-col min-h-0">
           {invalid ? (
             <p className="rounded-xl bg-white p-8 text-sm text-gray-600 shadow-sm">
               This pick-up link isn&apos;t recognised. Ask us for a fresh one.
@@ -180,7 +180,7 @@ export default function PickupPage({ params }: { params: Promise<{ token: string
               {error && <p className="mt-2 shrink-0 text-sm text-red-600">{error}</p>}
 
               {/* Calendar grid — sized to fill remaining viewport */}
-              <div className="mt-3 min-h-0 flex-1 overflow-x-auto overflow-y-hidden">
+              <div className="mt-3 min-h-0 flex-1 overflow-y-auto">
                 <div style={{ width: gridW, height: GRID_HOURS * hourPx + 34 }}>
                   {/* Day headers */}
                   <div className="grid" style={{ gridTemplateColumns: `${GUTTER}px repeat(7, ${COL}px)` }}>
