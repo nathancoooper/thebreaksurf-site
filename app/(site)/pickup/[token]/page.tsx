@@ -24,9 +24,10 @@ interface PickupData {
 
 const GRID_START_MIN = 8 * 60;
 const GRID_END_MIN = 20 * 60;
-const GRID_HOURS = (GRID_END_MIN - GRID_START_MIN) / 60;
-const GUTTER = 44;
-const COL = 104;
+const GRID_TOTAL_MIN = GRID_END_MIN - GRID_START_MIN;
+const GRID_HOURS = GRID_TOTAL_MIN / 60;
+const GUTTER_PX = 48;
+const COL_MIN_PX = 96;
 const MAX_WEEK_OFFSET = 3;
 
 function dayKey(d: Date) {
@@ -90,9 +91,8 @@ export default function PickupPage({ params }: { params: Promise<{ token: string
   }, [data]);
 
   const todayKey = dayKey(new Date());
-  const hours = Array.from({ length: GRID_HOURS }, (_, i) => i);
+  const hourRows = Array.from({ length: GRID_HOURS }, (_, i) => GRID_START_MIN / 60 + i);
   const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  const hourPx = 56;
 
   const monthLabel = useMemo(() => {
     const fmt = (d: Date) => d.toLocaleDateString('en-GB', { month: 'long' });
@@ -115,14 +115,14 @@ export default function PickupPage({ params }: { params: Promise<{ token: string
 
   const selectedSlot = data?.slots.find(s => s.id === selected) ?? null;
   const currentSlot = data?.slots.find(s => s.id === data.currentSlotId) ?? null;
-  const gridW = GUTTER + 7 * COL;
+  const gridCols = `${GUTTER_PX}px repeat(7, minmax(${COL_MIN_PX}px, 1fr))`;
 
   return (
-    <div className="flex h-dvh flex-col pt-[72px]">
-      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden bg-cream px-4 py-6 lg:flex-row lg:mx-auto lg:max-w-7xl lg:w-full">
+    <div className="mx-auto w-full max-w-7xl px-4 py-6">
+      <div className="flex flex-col gap-4 lg:h-[calc(100dvh-72px-3rem)] lg:flex-row lg:overflow-hidden">
 
         {/* ── Sidebar ─────────────────────────────── */}
-        <aside className="w-full shrink-0 rounded-xl bg-white p-5 shadow-sm lg:w-64">
+        <aside className="w-full shrink-0 rounded-xl bg-white p-5 shadow-sm lg:w-64 lg:overflow-y-auto">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-forest/50">The Break × AUB</p>
           <h1 className="mt-1 text-xl font-semibold text-gray-900">Pick up your garment</h1>
           {data && !done && (
@@ -145,7 +145,7 @@ export default function PickupPage({ params }: { params: Promise<{ token: string
         </aside>
 
         {/* ── Week view ───────────────────────────── */}
-        <main className="min-w-0 flex-1 flex flex-col min-h-0">
+        <main className="flex min-h-0 min-w-0 flex-1 flex-col">
           {invalid ? (
             <p className="rounded-xl bg-white p-8 text-sm text-gray-600 shadow-sm">
               This pick-up link isn&apos;t recognised. Ask us for a fresh one.
@@ -179,11 +179,11 @@ export default function PickupPage({ params }: { params: Promise<{ token: string
 
               {error && <p className="mt-2 shrink-0 text-sm text-red-600">{error}</p>}
 
-              {/* Calendar grid — sized to fill remaining viewport */}
-              <div className="mt-3 min-h-0 flex-1 overflow-y-auto">
-                <div style={{ width: gridW, height: GRID_HOURS * hourPx + 34 }}>
+              {/* Calendar grid — fills available height on desktop, scrolls on small screens */}
+              <div className="mt-3 min-h-0 flex-1 overflow-x-auto rounded-xl bg-white shadow-sm lg:overflow-hidden">
+                <div className="flex h-full min-h-[480px] min-w-[760px] flex-col">
                   {/* Day headers */}
-                  <div className="grid" style={{ gridTemplateColumns: `${GUTTER}px repeat(7, ${COL}px)` }}>
+                  <div className="grid shrink-0" style={{ gridTemplateColumns: gridCols }}>
                     <div />
                     {week.map(d => {
                       const isToday = dayKey(d) === todayKey;
@@ -198,17 +198,19 @@ export default function PickupPage({ params }: { params: Promise<{ token: string
                     })}
                   </div>
                   {/* All-day row */}
-                  <div className="grid" style={{ gridTemplateColumns: `${GUTTER}px repeat(7, ${COL}px)`, height: 24 }}>
-                    <div className="px-1 pt-1 text-[10px] text-forest/40">all-day</div>
+                  <div className="grid shrink-0 border-y border-forest/10" style={{ gridTemplateColumns: gridCols }}>
+                    <div className="px-1 py-1 text-[10px] text-forest/40">all-day</div>
                     {week.map(d => <div key={d.toISOString()} className="border-l border-forest/10" />)}
                   </div>
-                  {/* Time body */}
-                  <div className="grid" style={{ gridTemplateColumns: `${GUTTER}px repeat(7, ${COL}px)`, height: GRID_HOURS * hourPx }}>
+                  {/* Time body — hour rows share height equally, slots positioned by % */}
+                  <div className="grid min-h-0 flex-1" style={{ gridTemplateColumns: gridCols }}>
                     {/* Gutter */}
-                    <div className="relative">
-                      {hours.map(h => (
-                        <div key={h} className="absolute right-1 text-[10px] text-forest/40" style={{ top: h * hourPx - 7 }}>
-                          {String(h + GRID_START_MIN / 60).padStart(2, '0')}:00
+                    <div className="flex flex-col">
+                      {hourRows.map(h => (
+                        <div key={h} className="relative flex-1 border-t border-forest/10 first:border-t-0">
+                          <span className="absolute -top-2 right-1 bg-white pr-0.5 text-[10px] text-forest/40">
+                            {String(h).padStart(2, '0')}:00
+                          </span>
                         </div>
                       ))}
                     </div>
@@ -217,14 +219,15 @@ export default function PickupPage({ params }: { params: Promise<{ token: string
                       const k = dayKey(d);
                       const isToday = k === todayKey;
                       return (
-                        <div key={d.toISOString()} className={`relative border-l border-forest/10 ${isToday ? 'bg-forest/[0.04]' : ''}`}
-                          style={{ height: GRID_HOURS * hourPx }}>
-                          {hours.map(h => (
-                            <div key={h} className="absolute left-0 right-0 border-t border-forest/10" style={{ top: h * hourPx }} />
-                          ))}
+                        <div key={d.toISOString()} className={`relative border-l border-forest/10 ${isToday ? 'bg-forest/[0.04]' : ''}`}>
+                          <div className="absolute inset-0 flex flex-col">
+                            {hourRows.map(h => (
+                              <div key={h} className="flex-1 border-t border-forest/10 first:border-t-0" />
+                            ))}
+                          </div>
                           {(slotsByDay.get(k) ?? []).map(s => {
-                            const top = Math.max(0, (mins(s.startsAt) - GRID_START_MIN) / 60 * hourPx);
-                            const bottom = Math.min(GRID_HOURS * hourPx, (mins(s.endsAt) - GRID_START_MIN) / 60 * hourPx);
+                            const topPct = Math.max(0, (mins(s.startsAt) - GRID_START_MIN) / GRID_TOTAL_MIN * 100);
+                            const heightPct = Math.max(4, (mins(s.endsAt) - mins(s.startsAt)) / GRID_TOTAL_MIN * 100);
                             const full = s.remaining <= 0 && !s.mine;
                             const active = selected === s.id;
                             return (
@@ -238,7 +241,7 @@ export default function PickupPage({ params }: { params: Promise<{ token: string
                                     : s.mine ? 'bg-[#C4622D]/25 text-forest ring-1 ring-[#C4622D]'
                                     : 'bg-forest/15 text-forest hover:bg-forest/25'
                                 }`}
-                                style={{ top, height: Math.max(28, bottom - top) }}
+                                style={{ top: `${topPct}%`, height: `calc(${heightPct}% - 2px)` }}
                                 title={s.note ?? ''}
                               >
                                 <span className="font-semibold">{fmtTime(s.startsAt)}–{fmtTime(s.endsAt)}</span>
