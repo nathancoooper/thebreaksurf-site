@@ -38,3 +38,62 @@ export async function deleteSubmission(id: string): Promise<boolean> {
     .run();
   return result.meta.changes > 0;
 }
+
+export async function getSubmission(id: string): Promise<UniversitySubmission | null> {
+  const db = getDb();
+  const row = await db.prepare('SELECT data FROM university_submissions WHERE id = ?')
+    .bind(id)
+    .first<{ data: string }>();
+  return row ? JSON.parse(row.data) as UniversitySubmission : null;
+}
+
+export async function getSubmissionByToken(token: string): Promise<UniversitySubmission | null> {
+  // V001: token scan is fine at collab volumes (tens of rows, not thousands).
+  const db = getDb();
+  const rows = await db.prepare('SELECT data FROM university_submissions')
+    .all<{ data: string }>();
+  for (const r of rows.results) {
+    try {
+      const s = JSON.parse(r.data) as UniversitySubmission;
+      if (s.pickupToken === token) return s;
+    } catch { /* skip malformed docs */ }
+  }
+  return null;
+}
+
+async function patchSubmission(id: string, patch: Partial<UniversitySubmission>): Promise<UniversitySubmission | null> {
+  const current = await getSubmission(id);
+  if (!current) return null;
+  const next = { ...current, ...patch };
+  const db = getDb();
+  await db.prepare('UPDATE university_submissions SET data = ?, updated_at = NOW() WHERE id = ?')
+    .bind(JSON.stringify(next), id)
+    .run();
+  return next;
+}
+
+/** Mint (or return) the secret pickup-booking token for a submission. */
+export async function ensurePickupToken(id: string): Promise<UniversitySubmission | null> {
+  const current = await getSubmission(id);
+  if (!current) return null;
+  if (current.pickupToken) return current;
+  const { randomUUID } = await import('node:crypto');
+  return patchSubmission(id, { pickupToken: randomUUID().replace(/-/g, '') });
+}
+
+/** Book (or re-book) a pickup slot. Returns null when the slot is missing/full. */
+export async function bookPickupSlot(
+  submissionId: string,
+  slotId: string,
+  slotCapacity: number,
+  bookedCount: number,
+  alreadyOnSlot: boolean,
+): Promise<UniversitySubmission | null> {
+  // Re-booking the same slot keeps the student's own seat — don't count it.
+  const effective = bookedCount - (alreadyOnSlot ? 1 : 0);
+  if (effective >= slotCapacity) return null;
+  return patchSubmission(submissionId, {
+    pickupSlotId: slotId,
+    pickupBookedAt: new Date().toISOString(),
+  });
+}

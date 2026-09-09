@@ -106,4 +106,21 @@ export interface UniversitySubmission {
   note?: string;
   completed: boolean;
   createdAt: string;
+  // V001 pickup booking — set once the garment is ready for collection.
+  pickupToken?: string;   // secret in the emailed /pickup/[token] link
+  pickupSlotId?: string;  // chosen slot id
+  pickupBookedAt?: string; // ISO timestamp of the booking
+}
+
+export interface PickupSlot {
+  id: string;
+  startsAt: string; // ISO datetime
+  endsAt: string;   // ISO datetime
+  capacity: number; // max bookings
+  note?: string;    // e.g. "SU foyer" / location
+  createdAt: string;
+}
+
+export interface PickupSlotWithCount extends PickupSlot {
+  booked: number;
 }

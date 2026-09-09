@@ -708,3 +708,45 @@ export function universityDropoffAlertHtml(props: UniversityDropoffAlertProps): 
 </body>
 </html>`;
 }
+
+export interface PickupReadyProps {
+  studentName: string;
+  garment: string;
+  pickupUrl: string;
+}
+
+export function pickupReadyHtml(props: PickupReadyProps): string {
+  const { studentName, garment, pickupUrl } = props;
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f5f2ec;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f2ec;padding:32px 16px;">
+<tr><td align="center">
+<table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;">
+
+  <tr><td align="center" style="padding:32px 0 24px;">
+    ${logoSvg()}
+  </td></tr>
+
+  <tr><td style="background:#ffffff;border-radius:6px;padding:36px;">
+    <p style="margin:0 0 6px;font-size:11px;font-weight:600;letter-spacing:0.15em;text-transform:uppercase;color:#c4622d;font-family:Arial,sans-serif;">Ready for pick-up</p>
+    <p style="margin:0 0 12px;font-size:26px;font-weight:500;color:#1c1c1c;font-family:Georgia,serif;">Hi ${studentName},</p>
+    <p style="margin:0 0 20px;font-size:14px;line-height:1.6;color:#333;font-family:Arial,sans-serif;">Your <strong>${garment}</strong> is embroidered and ready to collect. Pick a pick-up slot that suits you:</p>
+    <p style="margin:0;text-align:center;">
+      <a href="${pickupUrl}" style="display:inline-block;background:#c4622d;color:#ffffff;text-decoration:none;font-family:Arial,sans-serif;font-size:15px;font-weight:600;padding:14px 32px;border-radius:6px;">Choose a pick-up slot</a>
+    </p>
+    <p style="margin:20px 0 0;font-size:12px;color:#888;font-family:Arial,sans-serif;">If the button doesn't work, paste this link into your browser:<br><a href="${pickupUrl}" style="color:#c4622d;">${pickupUrl}</a></p>
+  </td></tr>
+
+  <tr><td style="padding:24px;text-align:center;">
+    <p style="margin:0;font-size:11px;color:#aaa;font-family:Arial,sans-serif;">The Break Surf · university collab</p>
+  </td></tr>
+
+</table>
+</td></tr>
+</table>
+</body>
+</html>`;
+}
