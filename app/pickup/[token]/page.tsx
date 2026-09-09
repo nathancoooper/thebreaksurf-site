@@ -160,18 +160,11 @@ export default function PickupPage({ params }: { params: Promise<{ token: string
         ) : (
           <div className="rounded-sm border border-charcoal/10 bg-white p-6 md:p-8">
             {/* ── Header block ── */}
-            <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-3 border-b border-charcoal/10 pb-6">
-              <div>
-                <p className="text-xs font-medium uppercase tracking-[0.25em] text-charcoal/40">{data.studentName}</p>
-                <h1 className="mt-2 text-2xl font-bold tracking-tight text-charcoal">Pick up your garment</h1>
-                <p className="mt-2 text-sm leading-relaxed text-charcoal/60">
-                  Your <strong className="font-medium text-charcoal">{data.garment}</strong> is ready.
-                </p>
-              </div>
-              <div className="space-y-1 text-sm text-charcoal/60">
-                <p>One hour slots</p>
-                <p>Arts University Bournemouth</p>
-              </div>
+            <div className="border-b border-charcoal/10 pb-6">
+              <h1 className="text-2xl font-bold tracking-tight text-charcoal">Pick up your garment</h1>
+              <p className="mt-2 text-sm leading-relaxed text-charcoal/60">
+                Hey {data.studentName || 'there'}! Just letting you know your {data.garment || 'garment'} is ready for collection. Book a slot below.
+              </p>
             </div>
             {data.currentSlotId && !done && (
               <p className="mt-4 rounded-sm bg-moss/10 px-3 py-2 text-xs leading-relaxed text-forest">
