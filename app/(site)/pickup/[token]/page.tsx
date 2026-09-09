@@ -52,10 +52,7 @@ export default function PickupPage({ params }: { params: Promise<{ token: string
   const [data, setData] = useState<PickupData | null>(null);
   const [invalid, setInvalid] = useState(false);
   const [weekOffset, setWeekOffset] = useState(0);
-  const [miniCursor, setMiniCursor] = useState(() => {
-    const n = new Date();
-    return { y: n.getFullYear(), m: n.getMonth() };
-  });
+  const [focusedDay, setFocusedDay] = useState<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [done, setDone] = useState<SlotOption | null>(null);
@@ -99,29 +96,13 @@ export default function PickupPage({ params }: { params: Promise<{ token: string
     return { slotsByDay: byDay, openDays: open };
   }, [data]);
 
-  const miniCells = useMemo(() => {
-    const { y, m } = miniCursor;
-    const lead = (new Date(y, m, 1).getDay() + 6) % 7;
-    const daysInMonth = new Date(y, m + 1, 0).getDate();
-    const cells: (Date | null)[] = [];
-    for (let i = 0; i < lead; i++) cells.push(null);
-    for (let d = 1; d <= daysInMonth; d++) cells.push(new Date(y, m, d));
-    while (cells.length % 7 !== 0) cells.push(null);
-    return cells;
-  }, [miniCursor]);
-
-  function jumpToDay(d: Date) {
-    const diffDays = Math.round((new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime() - mondayOfWeek(0).getTime()) / 86400000);
-    const off = Math.floor(diffDays / 7);
-    setWeekOffset(Math.max(0, Math.min(MAX_WEEK_OFFSET, off)));
-  }
+  const todayKey = dayKey(new Date());
 
   const monthLabel = useMemo(() => {
     const fmt = (d: Date) => d.toLocaleDateString('en-GB', { month: 'long' });
     return fmt(week[0]) === fmt(week[6]) ? `${fmt(week[0])} ${week[6].getFullYear()}` : `${fmt(week[0])} – ${fmt(week[6])} ${week[6].getFullYear()}`;
   }, [week]);
 
-  const todayKey = dayKey(new Date());
   const hours = Array.from({ length: (GRID_END_MIN - GRID_START_MIN) / 60 }, (_, i) => GRID_START_MIN / 60 + i);
   const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
@@ -161,38 +142,42 @@ export default function PickupPage({ params }: { params: Promise<{ token: string
             </p>
           )}
 
-          {/* Mini month */}
+          {/* Mini week */}
           <div className="mt-5 border-t border-gray-100 pt-4">
-            <div className="mb-1 flex items-center justify-between">
-              <p className="text-sm font-semibold text-gray-900">
-                {new Date(miniCursor.y, miniCursor.m, 1).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}
-              </p>
+            <div className="mb-2 flex items-center justify-between">
+              <p className="text-sm font-semibold text-gray-900">This week</p>
               <div className="flex gap-1">
-                <button onClick={() => setMiniCursor(c => ({ y: c.m === 0 ? c.y - 1 : c.y, m: (c.m + 11) % 12 }))}
-                  aria-label="Previous month" className="rounded-full px-2 text-gray-500 hover:bg-gray-100">‹</button>
-                <button onClick={() => setMiniCursor(c => ({ y: c.m === 11 ? c.y + 1 : c.y, m: (c.m + 1) % 12 }))}
-                  aria-label="Next month" className="rounded-full px-2 text-gray-500 hover:bg-gray-100">›</button>
+                <button onClick={() => setWeekOffset(o => Math.max(0, o - 1))} disabled={weekOffset === 0}
+                  aria-label="Previous week" className="rounded-full px-2 text-gray-500 hover:bg-gray-100 disabled:opacity-30">‹</button>
+                <button onClick={() => setWeekOffset(0)}
+                  className="rounded-full px-2 text-xs font-medium text-gray-500 hover:bg-gray-100">Today</button>
+                <button onClick={() => setWeekOffset(o => Math.min(MAX_WEEK_OFFSET, o + 1))} disabled={weekOffset === MAX_WEEK_OFFSET}
+                  aria-label="Next week" className="rounded-full px-2 text-gray-500 hover:bg-gray-100 disabled:opacity-30">›</button>
               </div>
             </div>
-            <div className="grid grid-cols-7 text-center text-[10px] font-medium text-gray-400">
-              {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d, i) => <div key={i} className="py-0.5">{d}</div>)}
-            </div>
-            <div className="grid grid-cols-7 text-center text-xs">
-              {miniCells.map((d, i) => {
-                if (!d) return <div key={`x${i}`} />;
+            <div className="grid grid-cols-7 gap-0.5 text-center">
+              {week.map(d => {
                 const k = dayKey(d);
                 const isToday = k === todayKey;
                 const open = openDays.has(k);
+                const focused = focusedDay === k;
                 return (
                   <button
                     key={k}
-                    onClick={() => jumpToDay(d)}
-                    className={`mx-auto my-px flex h-7 w-7 flex-col items-center justify-center rounded-full ${
-                      isToday ? 'bg-[#C4622D] font-semibold text-white' : open ? 'font-medium text-gray-900 hover:bg-gray-100' : 'text-gray-300'
+                    onClick={() => setFocusedDay(focused ? null : k)}
+                    className={`flex flex-col items-center rounded-md py-1.5 ${
+                      focused ? 'bg-forest text-cream' : 'hover:bg-gray-100'
                     }`}
                   >
-                    {d.getDate()}
-                    {open && !isToday && <span className="h-1 w-1 rounded-full bg-forest" />}
+                    <span className={`text-[10px] font-medium ${focused ? 'text-cream/70' : 'text-gray-400'}`}>
+                      {d.toLocaleDateString('en-GB', { weekday: 'narrow' })}
+                    </span>
+                    <span className={`flex h-6 w-6 items-center justify-center rounded-full text-xs ${
+                      isToday && !focused ? 'bg-[#C4622D] font-semibold text-white' : focused ? 'font-semibold' : open ? 'font-medium text-gray-900' : 'text-gray-300'
+                    }`}>
+                      {d.getDate()}
+                    </span>
+                    {open && <span className={`h-1 w-1 rounded-full ${focused ? 'bg-cream' : 'bg-forest'}`} />}
                   </button>
                 );
               })}
@@ -274,8 +259,9 @@ export default function PickupPage({ params }: { params: Promise<{ token: string
                     {week.map(d => {
                       const k = dayKey(d);
                       const isToday = k === todayKey;
+                      const focused = focusedDay === k;
                       return (
-                        <div key={d.toISOString()} className={`relative border-l border-forest/10 ${isToday ? 'bg-forest/[0.04]' : ''}`}
+                        <div key={d.toISOString()} className={`relative border-l border-forest/10 ${isToday ? 'bg-forest/[0.04]' : ''} ${focused ? 'bg-forest/[0.08]' : ''}`}
                           style={{ height: hours.length * HOUR_PX }}>
                           {hours.map(h => (
                             <div key={h} className="absolute left-0 right-0 border-t border-forest/10"
