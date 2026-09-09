@@ -117,9 +117,9 @@ export default function PickupPage({ params }: { params: Promise<{ token: string
   }
 
   return (
-    <div className="flex min-h-dvh flex-col bg-cream">
+    <div className="flex min-h-dvh flex-col bg-white">
       {/* ── Co-branded header, copied from the /university navbar lockup ── */}
-      <header className="shrink-0 border-b border-charcoal/10 bg-cream">
+      <header className="shrink-0 border-b border-charcoal/10 bg-white">
         <div className="flex items-center justify-center gap-3 px-4 py-5">
           <Logo className="h-8 w-auto text-charcoal/80" />
           <span className="text-sm text-charcoal/40">x</span>
@@ -158,7 +158,7 @@ export default function PickupPage({ params }: { params: Promise<{ token: string
             <p className="mt-1 text-xs text-gray-400">Bring your name — we&apos;ll have your {data.garment} ready.</p>
           </div>
         ) : (
-          <div className="rounded-sm border border-charcoal/10 bg-white p-6 md:p-8">
+          <div className="p-6 md:p-8">
             {/* ── Header block ── */}
             <div className="border-b border-charcoal/10 pb-6">
               <h1 className="text-2xl font-bold tracking-tight text-charcoal">Pick up your garment</h1>
