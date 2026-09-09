@@ -92,11 +92,7 @@ export default function PickupPage({ params }: { params: Promise<{ token: string
   const todayKey = dayKey(new Date());
   const hours = Array.from({ length: GRID_HOURS }, (_, i) => GRID_START_MIN / 60 + i);
   const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  const hourPx = useMemo(() => {
-    if (typeof window === 'undefined') return 56;
-    const avail = Math.max(320, window.innerHeight - 200);
-    return Math.max(36, Math.min(72, avail / GRID_HOURS));
-  }, []);
+  const hourPx = 56;
 
   const monthLabel = useMemo(() => {
     const fmt = (d: Date) => d.toLocaleDateString('en-GB', { month: 'long' });
@@ -122,7 +118,7 @@ export default function PickupPage({ params }: { params: Promise<{ token: string
   const gridW = GUTTER + 7 * COL;
 
   return (
-    <div className="h-screen overflow-hidden bg-cream">
+    <div className="min-h-screen bg-cream">
       <div className="mx-auto flex h-full max-w-7xl flex-col gap-4 px-4 py-6 lg:flex-row">
 
         {/* ── Sidebar ─────────────────────────────── */}
@@ -175,7 +171,7 @@ export default function PickupPage({ params }: { params: Promise<{ token: string
                   <button onClick={() => setWeekOffset(o => Math.max(0, o - 1))} disabled={weekOffset === 0}
                     aria-label="Previous week" className="rounded-full bg-white px-2.5 py-1 text-sm text-forest shadow-sm disabled:opacity-30">‹</button>
                   <button onClick={() => setWeekOffset(0)}
-                    className="rounded-full bg-white px-3 py-1 text-sm font-medium text-forest shadow-sm">Today</button>
+                    className="rounded-full bg-white px-3 py-1 text-sm font-medium text-forest shadow-sm">This week</button>
                   <button onClick={() => setWeekOffset(o => Math.min(MAX_WEEK_OFFSET, o + 1))} disabled={weekOffset === MAX_WEEK_OFFSET}
                     aria-label="Next week" className="rounded-full bg-white px-2.5 py-1 text-sm text-forest shadow-sm disabled:opacity-30">›</button>
                 </div>
@@ -185,7 +181,7 @@ export default function PickupPage({ params }: { params: Promise<{ token: string
 
               {/* Calendar grid — sized to fill remaining viewport */}
               <div className="mt-3 min-h-0 flex-1 overflow-x-auto overflow-y-hidden">
-                <div style={{ width: gridW, height: hours.length * hourPx + 36 }}>
+                <div style={{ width: gridW, height: hours.length * hourPx + 34 }}>
                   {/* Day headers */}
                   <div className="grid" style={{ gridTemplateColumns: `${GUTTER}px repeat(7, ${COL}px)` }}>
                     <div />
