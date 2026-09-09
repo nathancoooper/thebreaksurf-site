@@ -165,13 +165,6 @@ export default function PickupPage({ params }: { params: Promise<{ token: string
               <p className="mt-2 text-sm leading-relaxed text-charcoal/60">
                 Hey {data.studentName || 'there'}! Just letting you know your {data.garment || 'garment'} is ready for collection. Book a slot below.
               </p>
-              <p className="mt-2 text-xs text-charcoal/40">
-                Can&apos;t make any of these?{' '}
-                <a href="mailto:nathan@thebreaksurf.co.uk" className="underline underline-offset-2 hover:text-charcoal">
-                  Get in touch
-                </a>{' '}
-                and we&apos;ll sort something out.
-              </p>
             </div>
             {data.currentSlotId && !done && (
               <p className="mt-4 rounded-sm bg-moss/10 px-3 py-2 text-xs leading-relaxed text-forest">
