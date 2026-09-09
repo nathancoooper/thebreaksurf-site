@@ -271,6 +271,13 @@ export default function PickupPage({ params }: { params: Promise<{ token: string
                 >
                   {saving ? 'Booking…' : data.currentSlotId ? 'Change my slot' : 'Confirm'}
                 </button>
+                <p className="mt-3 text-center text-xs text-charcoal/40">
+                  Can&apos;t make any of these?{' '}
+                  <a href="mailto:nathan@thebreaksurf.co.uk" className="underline underline-offset-2 hover:text-charcoal">
+                    Reach out
+                  </a>{' '}
+                  and we&apos;ll find a time.
+                </p>
               </div>
             </div>
           </div>
