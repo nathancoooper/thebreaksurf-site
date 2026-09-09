@@ -90,7 +90,7 @@ export default function PickupPage({ params }: { params: Promise<{ token: string
   }, [data]);
 
   const todayKey = dayKey(new Date());
-  const hours = Array.from({ length: GRID_HOURS }, (_, i) => GRID_START_MIN / 60 + i);
+  const hours = Array.from({ length: GRID_HOURS }, (_, i) => i);
   const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
   const hourPx = 56;
 
@@ -181,7 +181,7 @@ export default function PickupPage({ params }: { params: Promise<{ token: string
 
               {/* Calendar grid — sized to fill remaining viewport */}
               <div className="mt-3 min-h-0 flex-1 overflow-x-auto overflow-y-hidden">
-                <div style={{ width: gridW, height: hours.length * hourPx + 34 }}>
+                <div style={{ width: gridW, height: GRID_HOURS * hourPx + 34 }}>
                   {/* Day headers */}
                   <div className="grid" style={{ gridTemplateColumns: `${GUTTER}px repeat(7, ${COL}px)` }}>
                     <div />
@@ -203,7 +203,7 @@ export default function PickupPage({ params }: { params: Promise<{ token: string
                     {week.map(d => <div key={d.toISOString()} className="border-l border-forest/10" />)}
                   </div>
                   {/* Time body */}
-                  <div className="grid" style={{ gridTemplateColumns: `${GUTTER}px repeat(7, ${COL}px)`, height: hours.length * hourPx }}>
+                  <div className="grid" style={{ gridTemplateColumns: `${GUTTER}px repeat(7, ${COL}px)`, height: GRID_HOURS * hourPx }}>
                     {/* Gutter */}
                     <div className="relative">
                       {hours.map(h => (
@@ -218,13 +218,13 @@ export default function PickupPage({ params }: { params: Promise<{ token: string
                       const isToday = k === todayKey;
                       return (
                         <div key={d.toISOString()} className={`relative border-l border-forest/10 ${isToday ? 'bg-forest/[0.04]' : ''}`}
-                          style={{ height: hours.length * hourPx }}>
+                          style={{ height: GRID_HOURS * hourPx }}>
                           {hours.map(h => (
                             <div key={h} className="absolute left-0 right-0 border-t border-forest/10" style={{ top: h * hourPx }} />
                           ))}
                           {(slotsByDay.get(k) ?? []).map(s => {
                             const top = Math.max(0, (mins(s.startsAt) - GRID_START_MIN) / 60 * hourPx);
-                            const bottom = Math.min(hours.length * hourPx, (mins(s.endsAt) - GRID_START_MIN) / 60 * hourPx);
+                            const bottom = Math.min(GRID_HOURS * hourPx, (mins(s.endsAt) - GRID_START_MIN) / 60 * hourPx);
                             const full = s.remaining <= 0 && !s.mine;
                             const active = selected === s.id;
                             return (
