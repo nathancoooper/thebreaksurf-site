@@ -101,7 +101,6 @@ export default function PickupPage({ params }: { params: Promise<{ token: string
 
   const visibleSlots = (selectedDay && daySlots.get(selectedDay)) || [];
   const selectedSlot = data?.slots.find(s => s.id === selected) ?? null;
-  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
   async function confirm() {
     if (!selected || !data) return;
@@ -162,21 +161,14 @@ export default function PickupPage({ params }: { params: Promise<{ token: string
           <div className="grid gap-6 rounded-sm border border-charcoal/10 bg-white p-6 md:grid-cols-[240px_1fr] md:p-8">
             {/* ── Event details (cal.com left rail) ── */}
             <div>
-              <p className="text-xs font-medium uppercase tracking-[0.25em] text-charcoal/40">Pick-up</p>
+              <p className="text-xs font-medium uppercase tracking-[0.25em] text-charcoal/40">{data.studentName}</p>
               <h1 className="mt-2 font-display text-2xl font-medium text-charcoal">Pick up your garment</h1>
               <p className="mt-2 text-sm leading-relaxed text-charcoal/60">
-                Hi {data.studentName} — your <strong className="font-medium text-charcoal">{data.garment}</strong> is ready.
+                Your <strong className="font-medium text-charcoal">{data.garment}</strong> is ready.
               </p>
-              <div className="mt-4 space-y-2 text-sm text-charcoal/60">
-                <p className="flex items-center gap-2">
-                  <span aria-hidden>🕒</span> 1 hour windows
-                </p>
-                <p className="flex items-center gap-2">
-                  <span aria-hidden>📍</span> Shown per slot
-                </p>
-                <p className="flex items-center gap-2">
-                  <span aria-hidden>🌍</span> {tz}
-                </p>
+              <div className="mt-4 space-y-1 text-sm text-charcoal/60">
+                <p>One hour slots</p>
+                <p>Arts University Bournemouth</p>
               </div>
               {data.currentSlotId && !done && (
                 <p className="mt-4 rounded-sm bg-moss/10 px-3 py-2 text-xs leading-relaxed text-forest">
