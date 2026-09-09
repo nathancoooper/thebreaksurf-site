@@ -158,27 +158,29 @@ export default function PickupPage({ params }: { params: Promise<{ token: string
             <p className="mt-1 text-xs text-gray-400">Bring your name — we&apos;ll have your {data.garment} ready.</p>
           </div>
         ) : (
-          <div className="grid gap-6 rounded-sm border border-charcoal/10 bg-white p-6 md:grid-cols-[240px_1fr] md:p-8">
-            {/* ── Event details (cal.com left rail) ── */}
-            <div>
-              <p className="text-xs font-medium uppercase tracking-[0.25em] text-charcoal/40">{data.studentName}</p>
-              <h1 className="mt-2 text-2xl font-bold tracking-tight text-charcoal">Pick up your garment</h1>
-              <p className="mt-2 text-sm leading-relaxed text-charcoal/60">
-                Your <strong className="font-medium text-charcoal">{data.garment}</strong> is ready.
-              </p>
-              <div className="mt-4 space-y-1 text-sm text-charcoal/60">
+          <div className="rounded-sm border border-charcoal/10 bg-white p-6 md:p-8">
+            {/* ── Header block ── */}
+            <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-3 border-b border-charcoal/10 pb-6">
+              <div>
+                <p className="text-xs font-medium uppercase tracking-[0.25em] text-charcoal/40">{data.studentName}</p>
+                <h1 className="mt-2 text-2xl font-bold tracking-tight text-charcoal">Pick up your garment</h1>
+                <p className="mt-2 text-sm leading-relaxed text-charcoal/60">
+                  Your <strong className="font-medium text-charcoal">{data.garment}</strong> is ready.
+                </p>
+              </div>
+              <div className="space-y-1 text-sm text-charcoal/60">
                 <p>One hour slots</p>
                 <p>Arts University Bournemouth</p>
               </div>
-              {data.currentSlotId && !done && (
-                <p className="mt-4 rounded-sm bg-moss/10 px-3 py-2 text-xs leading-relaxed text-forest">
-                  You already have a booking — picking a new time moves it.
-                </p>
-              )}
             </div>
+            {data.currentSlotId && !done && (
+              <p className="mt-4 rounded-sm bg-moss/10 px-3 py-2 text-xs leading-relaxed text-forest">
+                You already have a booking — picking a new time moves it.
+              </p>
+            )}
 
             {/* ── Month + times ── */}
-            <div className="grid gap-6 sm:grid-cols-2">
+            <div className="mt-6 grid gap-8 sm:grid-cols-2">
               <div>
                 <div className="mb-2 flex items-center justify-between">
                   <p className="text-lg font-bold tracking-tight text-charcoal">
