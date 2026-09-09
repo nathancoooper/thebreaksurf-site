@@ -253,17 +253,17 @@ export default function PickupPage({ params }: { params: Promise<{ token: string
                           onClick={() => setSelected(s.id)}
                           className={`w-full rounded-sm border px-3 py-2.5 text-sm transition-colors ${
                             active
-                              ? 'border-forest bg-forest text-cream'
+                              ? 'border-forest bg-moss/25 text-forest'
                               : full
                                 ? 'cursor-not-allowed border-charcoal/10 bg-charcoal/5 text-charcoal/30'
                                 : 'border-charcoal/20 bg-white text-charcoal hover:border-charcoal/60'
                           }`}
                         >
                           <span className="font-medium">{fmtTime(s.startsAt)} – {fmtTime(s.endsAt)}</span>
-                          <span className={`ml-2 text-xs ${active ? 'text-cream/70' : 'text-charcoal/40'}`}>
+                          <span className="ml-2 text-xs text-charcoal/40">
                             {s.mine ? '· yours' : full ? '· full' : `· ${s.remaining} left`}
                           </span>
-                          {s.note && <span className={`block text-xs ${active ? 'text-cream/70' : 'text-charcoal/40'}`}>{s.note}</span>}
+                          {s.note && <span className="block text-xs text-charcoal/40">{s.note}</span>}
                         </button>
                       );
                     })}
