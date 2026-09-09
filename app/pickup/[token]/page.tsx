@@ -1,6 +1,7 @@
 'use client';
 
 import { use, useEffect, useMemo, useState } from 'react';
+import Logo from '@/components/Logo';
 
 interface SlotOption {
   id: string;
@@ -118,11 +119,27 @@ export default function PickupPage({ params }: { params: Promise<{ token: string
 
   return (
     <div className="flex min-h-dvh flex-col bg-cream">
-      {/* ── Functional header (no nav, no cart) ── */}
+      {/* ── Co-branded header, copied from the /university navbar lockup ── */}
       <header className="shrink-0 border-b border-charcoal/10 bg-cream">
-        <p className="px-4 py-4 text-center text-xs font-medium uppercase tracking-[0.25em] text-charcoal/60">
-          The Break × AUB
-        </p>
+        <div className="flex items-center justify-center gap-3 px-4 py-5">
+          <Logo className="h-8 w-auto text-charcoal/80" />
+          <span className="text-sm text-charcoal/40">x</span>
+          <div
+            role="img"
+            aria-label="Arts University Bournemouth"
+            className="h-5 w-[6.5rem] bg-charcoal/80"
+            style={{
+              WebkitMaskImage: 'url(/images/aub-logo-white.svg)',
+              maskImage: 'url(/images/aub-logo-white.svg)',
+              WebkitMaskRepeat: 'no-repeat',
+              maskRepeat: 'no-repeat',
+              WebkitMaskSize: 'contain',
+              maskSize: 'contain',
+              WebkitMaskPosition: 'center',
+              maskPosition: 'center',
+            }}
+          />
+        </div>
       </header>
       <div className="mx-auto w-full max-w-4xl flex-1 px-4 py-10">
         {invalid ? (
