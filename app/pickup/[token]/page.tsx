@@ -118,8 +118,15 @@ export default function PickupPage({ params }: { params: Promise<{ token: string
   const gridCols = `${GUTTER_PX}px repeat(7, minmax(${COL_MIN_PX}px, 1fr))`;
 
   return (
-    <div className="mx-auto w-full max-w-7xl px-4 py-6">
-      <div className="flex flex-col gap-4 lg:h-[calc(100dvh-72px-3rem)] lg:flex-row lg:overflow-hidden">
+    <div className="flex min-h-dvh flex-col bg-cream">
+      {/* ── Functional header (no nav, no cart) ── */}
+      <header className="shrink-0 border-b border-forest/10 bg-cream">
+        <p className="px-4 py-4 text-center text-sm font-semibold uppercase tracking-[0.3em] text-forest">
+          The Break × AUB
+        </p>
+      </header>
+      <div className="mx-auto w-full max-w-7xl flex-1 px-4 py-6">
+      <div className="flex flex-col gap-4 lg:h-[calc(100dvh-57px-3rem)] lg:flex-row lg:overflow-hidden">
 
         {/* ── Sidebar ─────────────────────────────── */}
         <aside className="w-full shrink-0 rounded-xl bg-white p-5 shadow-sm lg:w-64 lg:overflow-y-auto">
@@ -276,6 +283,7 @@ export default function PickupPage({ params }: { params: Promise<{ token: string
             </>
           )}
         </main>
+      </div>
       </div>
     </div>
   );
