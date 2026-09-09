@@ -120,8 +120,8 @@ export default function PickupPage({ params }: { params: Promise<{ token: string
   return (
     <div className="flex min-h-dvh flex-col bg-cream">
       {/* ── Functional header (no nav, no cart) ── */}
-      <header className="shrink-0 border-b border-forest/10 bg-cream">
-        <p className="px-4 py-4 text-center text-sm font-semibold uppercase tracking-[0.3em] text-forest">
+      <header className="shrink-0 border-b border-charcoal/10 bg-cream">
+        <p className="px-4 py-4 text-center text-xs font-medium uppercase tracking-[0.25em] text-charcoal/60">
           The Break × AUB
         </p>
       </header>
@@ -129,25 +129,25 @@ export default function PickupPage({ params }: { params: Promise<{ token: string
       <div className="flex flex-col gap-4 lg:h-[calc(100dvh-57px-3rem)] lg:flex-row lg:overflow-hidden">
 
         {/* ── Sidebar ─────────────────────────────── */}
-        <aside className="w-full shrink-0 rounded-xl bg-white p-5 shadow-sm lg:w-64 lg:overflow-y-auto">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-forest/50">The Break × AUB</p>
-          <h1 className="mt-1 text-xl font-semibold text-gray-900">Pick up your garment</h1>
+        <aside className="w-full shrink-0 rounded-sm border border-charcoal/10 bg-white p-6 lg:w-64 lg:overflow-y-auto">
+          <p className="text-xs font-medium uppercase tracking-[0.25em] text-charcoal/40">Pick-up</p>
+          <h1 className="mt-2 font-display text-2xl font-medium text-charcoal">Pick up your garment</h1>
           {data && !done && (
-            <p className="mt-2 text-sm text-gray-500">
-              Hi {data.studentName} — your <strong className="text-gray-700">{data.garment}</strong> is ready. Tap a green window.
+            <p className="mt-3 text-sm leading-relaxed text-charcoal/60">
+              Hi {data.studentName} — your <strong className="font-medium text-charcoal">{data.garment}</strong> is ready. Tap a green window.
             </p>
           )}
           {currentSlot && !done && (
-            <p className="mt-3 rounded-md bg-forest/10 px-3 py-2 text-xs text-forest">
+            <p className="mt-3 rounded-sm bg-moss/10 px-3 py-2 text-xs leading-relaxed text-forest">
               Booked: {new Date(currentSlot.startsAt).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}
               {' '}{fmtTime(currentSlot.startsAt)} — picking a new time moves it.
             </p>
           )}
-          <div className="mt-4 space-y-1.5 border-t border-gray-100 pt-4 text-xs text-gray-500">
-            <p className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-sm bg-forest/30" /> Available</p>
-            <p className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-sm bg-[#C4622D]/40" /> Your booking</p>
-            <p className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-sm bg-gray-200" /> Full</p>
-            <p className="pt-1 text-gray-400">🌍 {tz}</p>
+          <div className="mt-4 space-y-1.5 border-t border-charcoal/10 pt-4 text-xs text-charcoal/60">
+            <p className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-sm bg-moss/40" /> Available</p>
+            <p className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-sm bg-terra/50" /> Your booking</p>
+            <p className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-sm bg-charcoal/10" /> Full</p>
+            <p className="pt-1 text-charcoal/40">🌍 {tz}</p>
           </div>
         </aside>
 
@@ -173,21 +173,21 @@ export default function PickupPage({ params }: { params: Promise<{ token: string
           ) : (
             <>
               <div className="flex shrink-0 flex-wrap items-center justify-between gap-3">
-                <h2 className="text-3xl font-bold text-forest">{monthLabel}</h2>
-                <div className="flex items-center gap-1">
+                <h2 className="font-display text-4xl font-medium text-charcoal">{monthLabel}</h2>
+                <div className="flex items-center gap-2">
                   <button onClick={() => setWeekOffset(o => Math.max(0, o - 1))} disabled={weekOffset === 0}
-                    aria-label="Previous week" className="rounded-full bg-white px-2.5 py-1 text-sm text-forest shadow-sm disabled:opacity-30">‹</button>
+                    aria-label="Previous week" className="rounded-sm border border-charcoal/20 px-3 py-1.5 text-sm text-charcoal transition-colors hover:border-charcoal/50 disabled:opacity-30">‹</button>
                   <button onClick={() => setWeekOffset(0)}
-                    className="rounded-full bg-white px-3 py-1 text-sm font-medium text-forest shadow-sm">This week</button>
+                    className="rounded-sm border border-charcoal/20 px-4 py-1.5 text-sm font-medium text-charcoal transition-colors hover:border-charcoal/50">This week</button>
                   <button onClick={() => setWeekOffset(o => Math.min(MAX_WEEK_OFFSET, o + 1))} disabled={weekOffset === MAX_WEEK_OFFSET}
-                    aria-label="Next week" className="rounded-full bg-white px-2.5 py-1 text-sm text-forest shadow-sm disabled:opacity-30">›</button>
+                    aria-label="Next week" className="rounded-sm border border-charcoal/20 px-3 py-1.5 text-sm text-charcoal transition-colors hover:border-charcoal/50 disabled:opacity-30">›</button>
                 </div>
               </div>
 
               {error && <p className="mt-2 shrink-0 text-sm text-red-600">{error}</p>}
 
               {/* Calendar grid — fills available height on desktop, scrolls on small screens */}
-              <div className="mt-3 min-h-0 flex-1 overflow-x-auto rounded-xl bg-white shadow-sm lg:overflow-hidden">
+              <div className="mt-3 min-h-0 flex-1 overflow-x-auto rounded-sm border border-charcoal/10 bg-white lg:overflow-hidden">
                 <div className="flex h-full min-h-[480px] min-w-[760px] flex-col">
                   {/* Day headers */}
                   <div className="grid shrink-0" style={{ gridTemplateColumns: gridCols }}>
@@ -238,10 +238,10 @@ export default function PickupPage({ params }: { params: Promise<{ token: string
                                 disabled={full}
                                 onClick={() => setSelected(s.id)}
                                 className={`absolute left-0 right-0 overflow-hidden px-1.5 py-1 text-left text-[11px] leading-tight ${
-                                  active ? 'bg-forest text-cream shadow'
-                                    : full ? 'cursor-not-allowed bg-gray-100 text-gray-400'
-                                    : s.mine ? 'bg-[#C4622D]/25 text-forest ring-1 ring-inset ring-[#C4622D]'
-                                    : 'bg-forest/15 text-forest hover:bg-forest/25'
+                                  active ? 'bg-forest text-cream'
+                                    : full ? 'cursor-not-allowed bg-charcoal/5 text-charcoal/30'
+                                    : s.mine ? 'bg-terra/25 text-charcoal ring-1 ring-inset ring-terra'
+                                    : 'bg-moss/20 text-forest hover:bg-moss/30'
                                 }`}
                                 style={{ top: `${topPct}%`, height: `${heightPct}%` }}
                                 title={s.note ?? ''}
@@ -261,7 +261,7 @@ export default function PickupPage({ params }: { params: Promise<{ token: string
               </div>
 
               {/* Confirm bar */}
-              <div className="mt-3 flex shrink-0 items-center justify-between gap-3 rounded-xl bg-forest px-5 py-3 text-cream shadow-lg">
+              <div className="mt-3 flex shrink-0 items-center justify-between gap-3 rounded-sm bg-forest px-5 py-3.5 text-cream">
                 <p className="text-sm">
                   {selectedSlot ? (
                     <>
@@ -276,7 +276,7 @@ export default function PickupPage({ params }: { params: Promise<{ token: string
                   )}
                 </p>
                 <button onClick={confirm} disabled={!selected || saving}
-                  className="shrink-0 rounded-md bg-cream px-5 py-2 text-sm font-semibold text-forest disabled:opacity-50">
+                  className="shrink-0 rounded-sm border border-cream/30 px-8 py-2.5 text-sm font-medium text-cream transition-all hover:border-cream/70 hover:bg-cream/10 disabled:opacity-50">
                   {saving ? 'Booking…' : data.currentSlotId ? 'Change my slot' : 'Confirm slot'}
                 </button>
               </div>
