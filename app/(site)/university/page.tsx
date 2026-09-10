@@ -59,13 +59,13 @@ export default async function UniversityPage() {
             <div className="mt-8 flex flex-wrap gap-3">
               <a
                 href={hero.buttonHref}
-                className="inline-block rounded-sm border border-cream/30 px-8 py-3.5 text-sm font-medium text-cream transition-all hover:border-cream/70 hover:bg-cream/10"
+                className="inline-block rounded-sm border border-cream/30 px-8 py-3.5 text-sm font-medium text-cream transition-all hover:border-[#F04DA3] hover:bg-[#F04DA3]/20"
               >
                 {hero.buttonText}
               </a>
               <a
                 href="#uni-shop"
-                className="inline-block rounded-sm border border-cream/30 px-8 py-3.5 text-sm font-medium text-cream transition-all hover:border-cream/70 hover:bg-cream/10"
+                className="inline-block rounded-sm border border-cream/30 px-8 py-3.5 text-sm font-medium text-cream transition-all hover:border-[#512B00] hover:bg-[#512B00]/20"
               >
                 Shop pre-made
               </a>
