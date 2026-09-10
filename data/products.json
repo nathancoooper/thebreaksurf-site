@@ -180,5 +180,148 @@
       ],
       "colors": {}
     }
+  },
+  {
+    "id": "aub-hoodie",
+    "name": "AUB Hoodie",
+    "price": 3500,
+    "description": "Heavyweight organic cotton hoodie embroidered with the AUB logo. Designed and made locally by The Break Surf.",
+    "details": [
+      "350gsm organic cotton",
+      "Relaxed fit",
+      "Kangaroo pocket",
+      "Ribbed cuffs and hem",
+      "Embroidered AUB logo"
+    ],
+    "category": "University",
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL"
+    ],
+    "colors": [
+      "Forest",
+      "Black",
+      "Cream"
+    ],
+    "featured": true,
+    "images": {
+      "cover": "/images/hero.jpg",
+      "gallery": [],
+      "colors": {}
+    }
+  },
+  {
+    "id": "aub-cap",
+    "name": "AUB Cap",
+    "price": 1800,
+    "description": "Structured cotton twill cap with embroidered AUB logo. One size fits all.",
+    "details": [
+      "100% cotton twill",
+      "Adjustable strap",
+      "Embroidered AUB logo",
+      "Pre-curved visor"
+    ],
+    "category": "University",
+    "sizes": [
+      "One Size"
+    ],
+    "colors": [
+      "Forest",
+      "Black"
+    ],
+    "featured": false,
+    "images": {
+      "cover": "/images/hero.jpg",
+      "gallery": [],
+      "colors": {}
+    }
+  },
+  {
+    "id": "aub-tote",
+    "name": "AUB Tote Bag",
+    "price": 1200,
+    "description": "Heavyweight organic cotton tote bag with screen-printed AUB logo. Perfect for campus.",
+    "details": [
+      "10oz organic cotton",
+      "Reinforced handles",
+      "Screen-printed logo",
+      "Internal pocket"
+    ],
+    "category": "University",
+    "sizes": [
+      "One Size"
+    ],
+    "colors": [
+      "Natural",
+      "Black"
+    ],
+    "featured": false,
+    "images": {
+      "cover": "/images/hero.jpg",
+      "gallery": [],
+      "colors": {}
+    }
+  },
+  {
+    "id": "aub-tee",
+    "name": "AUB Tee",
+    "price": 2200,
+    "description": "Relaxed-fit organic cotton tee with embroidered AUB logo on the chest.",
+    "details": [
+      "220gsm organic cotton",
+      "Relaxed, boxy fit",
+      "Reinforced crew neck",
+      "Embroidered AUB logo"
+    ],
+    "category": "University",
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL"
+    ],
+    "colors": [
+      "Forest",
+      "White",
+      "Black"
+    ],
+    "featured": true,
+    "images": {
+      "cover": "/images/hero.jpg",
+      "gallery": [],
+      "colors": {}
+    }
+  },
+  {
+    "id": "aub-sweatshirt",
+    "name": "AUB Sweatshirt",
+    "price": 3000,
+    "description": "Midweight organic cotton sweatshirt with embroidered AUB logo. Clean, minimal, warm.",
+    "details": [
+      "300gsm organic cotton",
+      "Regular fit",
+      "Ribbed cuffs and hem",
+      "Embroidered AUB logo"
+    ],
+    "category": "University",
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL"
+    ],
+    "colors": [
+      "Forest",
+      "Black",
+      "Cream"
+    ],
+    "featured": false,
+    "images": {
+      "cover": "/images/hero.jpg",
+      "gallery": [],
+      "colors": {}
+    }
   }
 ]
