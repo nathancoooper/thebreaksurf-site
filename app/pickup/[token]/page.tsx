@@ -87,25 +87,25 @@ function fireConfetti() {
 
 function ProgressBar({ status }: { status: SubmissionStatus }) {
   const currentIdx = PIPELINE.findIndex(s => s.key === status);
+  // 'submitted' isn't in PIPELINE — show nothing until received.
   if (currentIdx < 0) return null;
   return (
-    <div className="flex items-start">
+    <div className="flex items-center gap-0">
       {PIPELINE.map((step, i) => {
         const done = i < currentIdx;
         const current = i === currentIdx;
-        const last = i === PIPELINE.length - 1;
         return (
-          <div key={step.key} className="flex flex-1 items-start">
-            <div className="flex flex-col items-center" style={{ minWidth: 48 }}>
-              <div className={`h-3 w-3 rounded-full ${
-                done ? 'bg-forest' : current ? 'bg-forest shadow-[0_0_0_3px_rgba(42,74,30,0.15)]' : 'bg-charcoal/15'
+          <div key={step.key} className="flex flex-1 items-center">
+            <div className="flex flex-col items-center">
+              <div className={`h-2.5 w-2.5 rounded-full ${
+                done ? 'bg-forest' : current ? 'bg-forest ring-2 ring-forest/30' : 'bg-charcoal/15'
               }`} />
-              <span className={`mt-1.5 text-[11px] leading-tight text-center ${
-                done || current ? 'font-medium text-charcoal' : 'text-charcoal/35'
+              <span className={`mt-1 text-[10px] ${
+                done || current ? 'font-medium text-charcoal' : 'text-charcoal/40'
               }`}>{step.label}</span>
             </div>
-            {!last && (
-              <div className={`mt-1.5 h-[2px] flex-1 ${done ? 'bg-forest' : 'bg-charcoal/10'}`} />
+            {i < PIPELINE.length - 1 && (
+              <div className={`mx-1 h-px flex-1 ${done ? 'bg-forest' : 'bg-charcoal/10'}`} />
             )}
           </div>
         );
@@ -271,19 +271,6 @@ export default function PickupPage({ params }: { params: Promise<{ token: string
               </div>
             )}
 
-            {data.currentSlotId && !done && (
-              <p className="mt-4 rounded-sm bg-moss/10 px-3 py-2 text-xs leading-relaxed text-forest">
-                You already have a booking — picking a new time moves it.
-              </p>
-            )}
-            <p className="mt-3 text-xs text-charcoal/40">
-              Can&apos;t make any of these?{' '}
-              <a href="mailto:nathan@thebreaksurf.co.uk" className="underline underline-offset-2 hover:text-charcoal">
-                Reach out
-              </a>{' '}
-              and we&apos;ll find a time.
-            </p>
-
             {/* ── Month + times ── */}
             <div className="mt-6 grid gap-8 sm:grid-cols-2">
               <div>
@@ -376,8 +363,22 @@ export default function PickupPage({ params }: { params: Promise<{ token: string
                 >
                   {saving ? 'Booking…' : data.currentSlotId ? 'Change my slot' : 'Confirm'}
                 </button>
+                <p className="mt-3 text-center text-xs text-charcoal/40">
+                  Can&apos;t make any of these?{' '}
+                  <a href="mailto:nathan@thebreaksurf.co.uk" className="underline underline-offset-2 hover:text-charcoal">
+                    Reach out
+                  </a>{' '}
+                  and we&apos;ll find a time.
+                </p>
               </div>
             </div>
+
+            {/* ── Existing booking notice (moved below calendar) ── */}
+            {data.currentSlotId && !done && (
+              <p className="mt-4 rounded-sm bg-moss/10 px-3 py-2 text-xs leading-relaxed text-forest">
+                You already have a booking — picking a new time moves it.
+              </p>
+            )}
           </div>
         )}
       </div>
