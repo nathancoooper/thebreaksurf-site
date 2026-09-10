@@ -89,13 +89,11 @@ function ProgressBar({ status }: { status: SubmissionStatus }) {
   const currentIdx = PIPELINE.findIndex(s => s.key === status);
   if (currentIdx < 0) return null;
   return (
-    <div className="relative flex items-start px-3">
+    <div className="relative flex items-start px-[11px]">
       {/* Connector line — sits behind circles */}
-      <div className="absolute top-[11px] left-3 right-3 h-[3px] z-0">
-        <div className="flex h-full">
-          <div style={{ flex: currentIdx }} className="bg-amber" />
-          <div style={{ flex: PIPELINE.length - 1 - currentIdx }} className="bg-charcoal/10" />
-        </div>
+      <div className="absolute top-[11px] left-[11px] right-[11px] h-[3px] z-0 flex">
+        <div style={{ flex: currentIdx }} className="bg-amber" />
+        <div style={{ flex: PIPELINE.length - 1 - currentIdx }} className="bg-charcoal/10" />
       </div>
       {PIPELINE.map((step, i) => {
         const done = i < currentIdx;
