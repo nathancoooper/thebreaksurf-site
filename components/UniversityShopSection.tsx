@@ -212,7 +212,7 @@ export default function UniversityShopSection({ products }: { products: Product[
 
   return (
     <>
-      <section className="mx-auto max-w-6xl px-6 py-24">
+      <section id="uni-shop" className="mx-auto max-w-6xl px-6 py-24">
         <div className="mb-10 text-center">
           <p className="mb-1 text-xs font-medium uppercase tracking-widest text-terra">University Collection</p>
           <h2 className="text-3xl font-bold tracking-tight text-charcoal">Shop pre-made items</h2>

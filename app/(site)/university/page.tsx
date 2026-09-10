@@ -56,12 +56,18 @@ export default async function UniversityPage() {
             <h1 className="text-5xl font-bold leading-tight tracking-tight text-cream sm:text-7xl">
               {hero.heading}
             </h1>
-            <div className="mt-8">
+            <div className="mt-8 flex flex-wrap gap-3">
               <a
                 href={hero.buttonHref}
                 className="inline-block rounded-sm border border-cream/30 px-8 py-3.5 text-sm font-medium text-cream transition-all hover:border-cream/70 hover:bg-cream/10"
               >
                 {hero.buttonText}
+              </a>
+              <a
+                href="#uni-shop"
+                className="inline-block rounded-sm bg-cream px-8 py-3.5 text-sm font-medium text-charcoal transition-all hover:bg-cream/90"
+              >
+                Shop pre-made
               </a>
             </div>
           </div>
