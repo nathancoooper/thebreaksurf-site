@@ -372,14 +372,12 @@ export default function PickupPage({ params }: { params: Promise<{ token: string
                 </p>
               </div>
             </div>
-
-            {/* ── Existing booking notice (moved below calendar) ── */}
-            {data.currentSlotId && !done && (
-              <p className="mt-4 rounded-sm bg-moss/10 px-3 py-2 text-xs leading-relaxed text-forest">
-                You already have a booking — picking a new time moves it.
-              </p>
-            )}
           </div>
+        )}
+        {data?.currentSlotId && !done && (
+          <p className="mt-4 rounded-sm bg-moss/10 px-3 py-2 text-xs leading-relaxed text-forest">
+            You already have a booking — picking a new time moves it.
+          </p>
         )}
       </div>
     </div>
