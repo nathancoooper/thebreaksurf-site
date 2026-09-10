@@ -87,26 +87,29 @@ function fireConfetti() {
 
 function ProgressBar({ status }: { status: SubmissionStatus }) {
   const currentIdx = PIPELINE.findIndex(s => s.key === status);
-  // 'submitted' isn't in PIPELINE — show nothing until received.
   if (currentIdx < 0) return null;
   return (
-    <div className="flex items-center gap-0">
+    <div className="relative flex items-start px-3">
+      {/* Connector line — sits behind circles */}
+      <div className="absolute top-[6px] left-3 right-3 h-[2px] z-0">
+        <div className="flex h-full">
+          <div style={{ flex: currentIdx }} className="bg-forest" />
+          <div style={{ flex: PIPELINE.length - 1 - currentIdx }} className="bg-charcoal/10" />
+        </div>
+      </div>
       {PIPELINE.map((step, i) => {
         const done = i < currentIdx;
         const current = i === currentIdx;
         return (
-          <div key={step.key} className="flex flex-1 items-center">
-            <div className="flex flex-col items-center">
-              <div className={`h-2.5 w-2.5 rounded-full ${
-                done ? 'bg-forest' : current ? 'bg-forest ring-2 ring-forest/30' : 'bg-charcoal/15'
-              }`} />
-              <span className={`mt-1 text-[10px] ${
-                done || current ? 'font-medium text-charcoal' : 'text-charcoal/40'
-              }`}>{step.label}</span>
+          <div key={step.key} className="flex flex-1 flex-col items-center relative z-10">
+            <div className={`flex h-3 w-3 items-center justify-center rounded-full text-[8px] font-bold ${
+              done || current ? 'bg-amber text-[#F5EFE5]' : 'bg-charcoal/15 text-charcoal/30'
+            }`}>
+              {i + 1}
             </div>
-            {i < PIPELINE.length - 1 && (
-              <div className={`mx-1 h-px flex-1 ${done ? 'bg-forest' : 'bg-charcoal/10'}`} />
-            )}
+            <span className={`mt-1.5 text-[10px] leading-tight text-center ${
+              done || current ? 'font-medium text-charcoal' : 'text-charcoal/35'
+            }`}>{step.label}</span>
           </div>
         );
       })}
