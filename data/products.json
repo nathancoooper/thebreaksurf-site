@@ -293,35 +293,5 @@
       "gallery": [],
       "colors": {}
     }
-  },
-  {
-    "id": "aub-sweatshirt",
-    "name": "AUB Sweatshirt",
-    "price": 3000,
-    "description": "Midweight organic cotton sweatshirt with embroidered AUB logo. Clean, minimal, warm.",
-    "details": [
-      "300gsm organic cotton",
-      "Regular fit",
-      "Ribbed cuffs and hem",
-      "Embroidered AUB logo"
-    ],
-    "category": "University",
-    "sizes": [
-      "S",
-      "M",
-      "L",
-      "XL"
-    ],
-    "colors": [
-      "Forest",
-      "Black",
-      "Cream"
-    ],
-    "featured": false,
-    "images": {
-      "cover": "/images/hero.jpg",
-      "gallery": [],
-      "colors": {}
-    }
   }
 ]
