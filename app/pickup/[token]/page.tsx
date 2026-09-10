@@ -91,9 +91,9 @@ function ProgressBar({ status }: { status: SubmissionStatus }) {
   return (
     <div className="relative flex items-start px-3">
       {/* Connector line — sits behind circles */}
-      <div className="absolute top-[11px] left-3 right-3 h-[2px] z-0">
+      <div className="absolute top-[11px] left-3 right-3 h-[3px] z-0">
         <div className="flex h-full">
-          <div style={{ flex: currentIdx }} className="bg-forest" />
+          <div style={{ flex: currentIdx }} className="bg-amber" />
           <div style={{ flex: PIPELINE.length - 1 - currentIdx }} className="bg-charcoal/10" />
         </div>
       </div>
