@@ -53,7 +53,7 @@ export default async function UniversityPage() {
             <p className="mb-3 text-xs font-medium uppercase tracking-[0.25em] text-cream/60">
               {hero.label}
             </p>
-            <h1 className="font-display text-5xl font-medium leading-tight text-cream sm:text-7xl">
+            <h1 className="text-5xl font-bold leading-tight tracking-tight text-cream sm:text-7xl">
               {hero.heading}
             </h1>
             <div className="mt-8">
@@ -71,7 +71,7 @@ export default async function UniversityPage() {
       {/* Intro */}
       <section className="mx-auto max-w-2xl px-6 py-20 text-center">
         <p className="mb-3 text-xs font-medium uppercase tracking-[0.25em] text-charcoal/40">Collaboration</p>
-        <p className="font-display text-2xl font-medium leading-relaxed text-charcoal">
+        <p className="text-2xl font-bold tracking-tight leading-relaxed text-charcoal">
           We&rsquo;ve teamed up with the university to embroider your own garments with the university logo.
         </p>
         <p className="mt-4 text-sm leading-relaxed text-charcoal/60">
@@ -85,7 +85,7 @@ export default async function UniversityPage() {
         <div className="mx-auto grid max-w-6xl grid-cols-1 gap-10 px-6 py-16 sm:grid-cols-2 lg:grid-cols-4">
           {STEPS.map(({ heading, body }) => (
             <div key={heading}>
-              <h2 className="font-display text-lg font-medium text-charcoal">{heading}</h2>
+              <h2 className="text-lg font-bold tracking-tight text-charcoal">{heading}</h2>
               <p className="mt-2 text-sm leading-relaxed text-charcoal/70">{body}</p>
             </div>
           ))}
@@ -95,7 +95,7 @@ export default async function UniversityPage() {
       {/* Form + receipt */}
       <section id="dropoff-form" className="mx-auto max-w-6xl px-6 py-24">
         <div className="mb-10 text-center">
-          <h2 className="font-display text-3xl font-medium text-charcoal">Tell us about your garment</h2>
+          <h2 className="text-3xl font-bold tracking-tight text-charcoal">Tell us about your garment</h2>
           <p className="mt-2 text-sm text-charcoal/60">
             Fill this in when you drop your garment off at reception — one form per garment, please.
           </p>
@@ -115,8 +115,8 @@ export default async function UniversityPage() {
           </h2>
           <p className="mt-4 text-sm leading-relaxed text-charcoal/60">
             Last year, we supplied over 100 shirts, hoodies, and totes to societies across the university.
-            Every piece was <strong>printed by hand in our flat by students</strong> — keeping production
-            local, personal, and a little different from your usual merch supplier.
+            Every piece was <strong>printed by hand in our flat by students</strong>. What started as a
+            small side project has grown into clothing for societies, sports teams, and student groups across AUB.
           </p>
           <a
             href="mailto:nathan@thebreaksurf.co.uk"
