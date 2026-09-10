@@ -1,7 +1,23 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { PickupSlotWithCount, UniversitySubmission } from '@/types';
+import { PickupSlotWithCount, SubmissionStatus, UniversitySubmission } from '@/types';
+
+function effectiveStatus(s: UniversitySubmission): SubmissionStatus {
+  if (s.status) return s.status;
+  if (s.pickupSlotId) return 'booked';
+  if (s.completed) return 'ready';
+  return 'submitted';
+}
+
+const PIPELINE: { key: SubmissionStatus; label: string }[] = [
+  { key: 'submitted', label: 'Dropped off' },
+  { key: 'received', label: 'Received' },
+  { key: 'embroidering', label: 'Embroidering' },
+  { key: 'ready', label: 'Ready' },
+  { key: 'booked', label: 'Booked' },
+  { key: 'collected', label: 'Collected' },
+];
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -52,6 +68,19 @@ export default function UniversityPage() {
     setSubmissions(prev => prev.map(s => s.id === id ? { ...s, completed } : s));
   }
 
+  async function setStatus(id: string, status: SubmissionStatus) {
+    await fetch(`/api/admin/university/${id}/status`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status }),
+    });
+    setSubmissions(prev => prev.map(s => s.id === id ? {
+      ...s,
+      status,
+      completed: ['ready', 'booked', 'collected'].includes(status),
+    } : s));
+  }
+
   async function deleteSubmission(id: string) {
     await fetch(`/api/admin/university/${id}`, { method: 'DELETE' });
     setSubmissions(prev => prev.filter(s => s.id !== id));
@@ -92,10 +121,13 @@ export default function UniversityPage() {
     }
   }
 
-  const visible = submissions.filter(s => filter === 'completed' ? s.completed : !s.completed);
+  const visible = submissions.filter(s => {
+    const st = effectiveStatus(s);
+    return filter === 'completed' ? st === 'collected' : st !== 'collected';
+  });
   const counts = {
-    pending: submissions.filter(s => !s.completed).length,
-    completed: submissions.filter(s => s.completed).length,
+    pending: submissions.filter(s => effectiveStatus(s) !== 'collected').length,
+    completed: submissions.filter(s => effectiveStatus(s) === 'collected').length,
   };
 
   return (
@@ -227,19 +259,33 @@ export default function UniversityPage() {
                   )}
                 </div>
 
-                <div className="flex shrink-0 flex-col gap-2">
-                  {s.completed ? (
+                <div className="flex shrink-0 flex-col items-end gap-2">
+                  {/* Pipeline stepper */}
+                  <div className="flex flex-wrap gap-1">
+                    {PIPELINE.map(({ key, label }) => {
+                      const st = effectiveStatus(s);
+                      const cur = st === key;
+                      return (
+                        <button
+                          key={key}
+                          onClick={() => setStatus(s.id, key)}
+                          className={`rounded-md px-2 py-1 text-[11px] font-medium transition-colors ${
+                            cur ? 'bg-gray-900 text-white' : 'border border-gray-200 text-gray-500 hover:bg-gray-50'
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Pickup link row (only relevant when ready+) */}
+                  {(effectiveStatus(s) === 'ready' || effectiveStatus(s) === 'booked') && (
                     <>
-                      <button
-                        onClick={() => setCompleted(s.id, false)}
-                        className="rounded-md border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50"
-                      >
-                        Mark pending
-                      </button>
                       {pickupLinks[s.id] ? (
                         <div className="max-w-56 rounded-md border border-green-200 bg-green-50 p-2 text-xs">
                           <p className={pickupLinks[s.id].emailed ? 'text-green-700' : 'text-amber-700'}>
-                            {pickupLinks[s.id].emailed ? 'Link emailed ✓' : 'Email failed — copy manually:'}
+                            {pickupLinks[s.id].emailed ? 'Link emailed ✓' : 'Email failed — copy:'}
                           </p>
                           <button
                             onClick={() => { void navigator.clipboard.writeText(pickupLinks[s.id].url); }}
@@ -258,26 +304,19 @@ export default function UniversityPage() {
                           {sendingId === s.id ? 'Sending…' : 'Send pick-up link'}
                         </button>
                       )}
-                      {s.pickupSlotId && (
-                        <p className="text-xs text-gray-500">
-                          Booked: {(() => {
-                            const slot = slots.find(x => x.id === s.pickupSlotId);
-                            return slot ? formatSlot(slot.startsAt) : 'a deleted slot';
-                          })()}
-                        </p>
-                      )}
                     </>
-                  ) : (
-                    <button
-                      onClick={() => setCompleted(s.id, true)}
-                      className="rounded-md bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700"
-                    >
-                      Mark done
-                    </button>
+                  )}
+                  {s.pickupSlotId && (
+                    <p className="text-xs text-gray-500">
+                      Booked: {(() => {
+                        const slot = slots.find(x => x.id === s.pickupSlotId);
+                        return slot ? formatSlot(slot.startsAt) : 'a deleted slot';
+                      })()}
+                    </p>
                   )}
                   <button
                     onClick={() => deleteSubmission(s.id)}
-                    className="rounded-md px-3 py-1.5 text-xs font-medium text-red-500 hover:bg-red-50"
+                    className="text-xs text-red-500 hover:text-red-700"
                   >
                     Delete
                   </button>

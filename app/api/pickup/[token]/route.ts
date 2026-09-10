@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSubmissionByToken, bookPickupSlot } from '@/lib/universitySubmissions';
+import { getSubmissionByToken, bookPickupSlot, effectiveStatus } from '@/lib/universitySubmissions';
 import { listSlots, slotBookingCounts } from '@/lib/pickupSlots';
 
 // Public (token is the secret): week-view data for one submission.
@@ -38,7 +38,7 @@ export async function GET(
   return NextResponse.json({
     studentName: submission.studentName,
     garment: submission.garment,
-    ready: submission.completed,
+    status: effectiveStatus(submission),
     currentSlotId: submission.pickupSlotId ?? null,
     pickupBookedAt: submission.pickupBookedAt ?? null,
     slots: upcoming,

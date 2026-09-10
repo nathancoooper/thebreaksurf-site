@@ -1,7 +1,8 @@
 'use client';
 
-import { use, useEffect, useMemo, useState } from 'react';
+import { use, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Logo from '@/components/Logo';
+import type { SubmissionStatus } from '@/types';
 
 interface SlotOption {
   id: string;
@@ -17,11 +18,19 @@ interface SlotOption {
 interface PickupData {
   studentName: string;
   garment: string;
-  ready: boolean;
+  status: SubmissionStatus;
   currentSlotId: string | null;
   pickupBookedAt: string | null;
   slots: SlotOption[];
 }
+
+const PIPELINE: { key: SubmissionStatus; label: string }[] = [
+  { key: 'received', label: 'Received' },
+  { key: 'embroidering', label: 'Embroidering' },
+  { key: 'ready', label: 'Ready' },
+  { key: 'booked', label: 'Booked' },
+  { key: 'collected', label: 'Collected' },
+];
 
 function dayKey(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -35,6 +44,76 @@ function fmtLong(iso: string) {
   return new Date(iso).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
 }
 
+function fireConfetti() {
+  const canvas = document.createElement('canvas');
+  canvas.style.cssText = 'position:fixed;inset:0;z-index:9999;pointer-events:none';
+  document.body.appendChild(canvas);
+  const ctx = canvas.getContext('2d')!;
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  const colours = ['#2A4A1E', '#C4622D', '#7A9A6F', '#D4862A', '#1C1C1C'];
+  const pieces = Array.from({ length: 80 }, () => ({
+    x: Math.random() * canvas.width,
+    y: -10 - Math.random() * 100,
+    w: 4 + Math.random() * 4,
+    h: 8 + Math.random() * 6,
+    vx: (Math.random() - 0.5) * 3,
+    vy: 2 + Math.random() * 3,
+    r: Math.random() * Math.PI * 2,
+    vr: (Math.random() - 0.5) * 0.15,
+    color: colours[Math.floor(Math.random() * colours.length)],
+  }));
+  let frame = 0;
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    let alive = false;
+    for (const p of pieces) {
+      p.x += p.vx; p.y += p.vy; p.vy += 0.04; p.r += p.vr;
+      if (p.y > canvas.height + 20) continue;
+      alive = true;
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.r);
+      ctx.fillStyle = p.color;
+      ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+      ctx.restore();
+    }
+    frame++;
+    if (alive && frame < 180) requestAnimationFrame(draw);
+    else canvas.remove();
+  }
+  requestAnimationFrame(draw);
+}
+
+function ProgressBar({ status }: { status: SubmissionStatus }) {
+  const currentIdx = PIPELINE.findIndex(s => s.key === status);
+  // 'submitted' isn't in PIPELINE — show nothing until received.
+  if (currentIdx < 0) return null;
+  return (
+    <div className="flex items-center gap-0">
+      {PIPELINE.map((step, i) => {
+        const done = i < currentIdx;
+        const current = i === currentIdx;
+        return (
+          <div key={step.key} className="flex flex-1 items-center">
+            <div className="flex flex-col items-center">
+              <div className={`h-2.5 w-2.5 rounded-full ${
+                done ? 'bg-forest' : current ? 'bg-forest ring-2 ring-forest/30' : 'bg-charcoal/15'
+              }`} />
+              <span className={`mt-1 text-[10px] ${
+                done || current ? 'font-medium text-charcoal' : 'text-charcoal/40'
+              }`}>{step.label}</span>
+            </div>
+            {i < PIPELINE.length - 1 && (
+              <div className={`mx-1 h-px flex-1 ${done ? 'bg-forest' : 'bg-charcoal/10'}`} />
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function PickupPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = use(params);
   const [data, setData] = useState<PickupData | null>(null);
@@ -46,6 +125,7 @@ export default function PickupPage({ params }: { params: Promise<{ token: string
   const [saving, setSaving] = useState(false);
   const [done, setDone] = useState<SlotOption | null>(null);
   const [error, setError] = useState('');
+  const confettiFired = useRef(false);
 
   useEffect(() => {
     fetch(`/api/pickup/${token}`)
@@ -66,11 +146,18 @@ export default function PickupPage({ params }: { params: Promise<{ token: string
       .catch(() => setInvalid(true));
   }, [token]);
 
-  // Days in the visible month that have at least one bookable (or mine) future slot.
+  // Confetti on booking confirmation
+  useEffect(() => {
+    if (done && !confettiFired.current) {
+      confettiFired.current = true;
+      requestAnimationFrame(fireConfetti);
+    }
+  }, [done]);
+
   const { cells, availableDays, daySlots } = useMemo(() => {
     const { y, m } = monthCursor;
     const first = new Date(y, m, 1);
-    const lead = (first.getDay() + 6) % 7; // Mon-first offset
+    const lead = (first.getDay() + 6) % 7;
     const daysInMonth = new Date(y, m + 1, 0).getDate();
     const cells: (Date | null)[] = [];
     for (let i = 0; i < lead; i++) cells.push(null);
@@ -118,7 +205,6 @@ export default function PickupPage({ params }: { params: Promise<{ token: string
 
   return (
     <div className="flex min-h-dvh flex-col bg-cream">
-      {/* ── Co-branded header, copied from the /university navbar lockup ── */}
       <header className="shrink-0 border-b border-charcoal/10 bg-cream">
         <div className="flex items-center justify-center gap-3 px-4 py-5">
           <Logo className="h-8 w-auto text-charcoal/80" />
@@ -151,11 +237,22 @@ export default function PickupPage({ params }: { params: Promise<{ token: string
           <div className="mx-auto max-w-lg rounded-sm border border-charcoal/10 bg-white p-10 text-center">
             <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-forest text-xl text-cream">✓</div>
             <h1 className="mt-4 text-2xl font-bold tracking-tight text-charcoal">You&apos;re booked in</h1>
-            <p className="mt-2 text-sm text-gray-600">
+            <p className="mt-2 text-sm text-charcoal/60">
               {fmtLong(done.startsAt)} · {fmtTime(done.startsAt)} – {fmtTime(done.endsAt)}
               {done.note ? ` · ${done.note}` : ''}
             </p>
-            <p className="mt-1 text-xs text-gray-400">Bring your name — we&apos;ll have your {data.garment} ready.</p>
+            <p className="mt-6 text-sm text-charcoal/60">
+              We&apos;ll be at <strong className="font-medium text-charcoal">Arts University Bournemouth</strong>.
+            </p>
+            <a
+              href="https://maps.google.com/?q=Arts+University+Bournemouth"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-3 inline-flex items-center gap-2 rounded-sm border border-charcoal/20 px-4 py-2 text-sm text-charcoal transition-colors hover:border-charcoal/50"
+            >
+              <span>📍</span> View on Google Maps
+            </a>
+            <p className="mt-3 text-xs text-charcoal/40">Bring your name — we&apos;ll have your {data.garment} ready.</p>
           </div>
         ) : (
           <div className="rounded-sm border border-charcoal/10 bg-white p-6 md:p-8">
@@ -166,6 +263,14 @@ export default function PickupPage({ params }: { params: Promise<{ token: string
                 Hey {data.studentName || 'there'}! Just letting you know your {data.garment || 'garment'} is ready for collection. Book a slot below.
               </p>
             </div>
+
+            {/* ── Progress ── */}
+            {data.status !== 'submitted' && (
+              <div className="mt-5">
+                <ProgressBar status={data.status} />
+              </div>
+            )}
+
             {data.currentSlotId && !done && (
               <p className="mt-4 rounded-sm bg-moss/10 px-3 py-2 text-xs leading-relaxed text-forest">
                 You already have a booking — picking a new time moves it.

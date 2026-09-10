@@ -1,5 +1,27 @@
 import { getDb } from './db';
-import { UniversitySubmission } from '@/types';
+import { SubmissionStatus, UniversitySubmission } from '@/types';
+
+const STATUS_ORDER: SubmissionStatus[] = ['submitted', 'received', 'embroidering', 'ready', 'booked', 'collected'];
+
+/** Resolve effective status from a submission row — backwards-compatible with old rows. */
+export function effectiveStatus(s: UniversitySubmission): SubmissionStatus {
+  if (s.status) return s.status;
+  if (s.pickupSlotId) return 'booked';
+  if (s.completed) return 'ready';
+  return 'submitted';
+}
+
+/** Advance (or set) the status field. Never goes backwards. */
+export async function setSubmissionStatus(id: string, status: SubmissionStatus): Promise<UniversitySubmission | null> {
+  const current = await getSubmission(id);
+  if (!current) return null;
+  const curIdx = STATUS_ORDER.indexOf(effectiveStatus(current));
+  const newIdx = STATUS_ORDER.indexOf(status);
+  const next: Partial<UniversitySubmission> = { status };
+  // Mirror the legacy boolean when we hit 'ready' or beyond.
+  if (newIdx >= 3) next.completed = true; // 3 = 'ready'
+  return patchSubmission(id, next);
+}
 
 export async function saveSubmission(submission: UniversitySubmission): Promise<void> {
   const db = getDb();
@@ -81,7 +103,7 @@ export async function ensurePickupToken(id: string): Promise<UniversitySubmissio
   return patchSubmission(id, { pickupToken: randomUUID().replace(/-/g, '') });
 }
 
-/** Book (or re-book) a pickup slot. Returns null when the slot is missing/full. */
+/** Book (or re-book) a pickup slot. Auto-advances status to 'booked'. */
 export async function bookPickupSlot(
   submissionId: string,
   slotId: string,
@@ -89,11 +111,11 @@ export async function bookPickupSlot(
   bookedCount: number,
   alreadyOnSlot: boolean,
 ): Promise<UniversitySubmission | null> {
-  // Re-booking the same slot keeps the student's own seat — don't count it.
   const effective = bookedCount - (alreadyOnSlot ? 1 : 0);
   if (effective >= slotCapacity) return null;
   return patchSubmission(submissionId, {
     pickupSlotId: slotId,
     pickupBookedAt: new Date().toISOString(),
+    status: 'booked',
   });
 }

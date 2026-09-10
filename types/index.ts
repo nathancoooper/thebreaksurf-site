@@ -95,6 +95,8 @@ export interface Promotion {
   endDate: string;         // 'YYYY-MM-DD', inclusive
 }
 
+export type SubmissionStatus = 'submitted' | 'received' | 'embroidering' | 'ready' | 'booked' | 'collected';
+
 export interface UniversitySubmission {
   id: string;
   studentName: string;
@@ -104,7 +106,8 @@ export interface UniversitySubmission {
   photo?: string;
   colour: string;
   note?: string;
-  completed: boolean;
+  completed: boolean;          // legacy — maps to status ≥ 'ready'
+  status?: SubmissionStatus;   // V001 pipeline; absent on old rows (= 'submitted')
   createdAt: string;
   // V001 pickup booking — set once the garment is ready for collection.
   pickupToken?: string;   // secret in the emailed /pickup/[token] link
