@@ -1,9 +1,7 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
-import Link from 'next/link';
+import { useEffect, useState } from 'react';
 import Image from 'next/image';
-import Logo from '@/components/Logo';
 import { useCart } from '@/contexts/CartContext';
 import type { Product } from '@/types';
 
@@ -36,33 +34,22 @@ function UniProductCard({ product, onClick }: { product: Product; onClick: () =>
   );
 }
 
-function ProductModal({
-  product,
-  onClose,
-}: {
-  product: Product;
-  onClose: () => void;
-}) {
+function ProductModal({ product, onClose }: { product: Product; onClose: () => void }) {
   const { addItem } = useCart();
   const [imgIdx, setImgIdx] = useState(0);
   const [selectedColor, setSelectedColor] = useState(product.colors[0] ?? '');
   const [selectedSize, setSelectedSize] = useState(product.sizes[0] ?? '');
 
-  // Build image list: colour gallery → default gallery → cover
   const colorImages = product.images.colors?.[selectedColor];
   const images = [
     ...(colorImages?.cover ? [colorImages.cover] : []),
     ...(colorImages?.gallery ?? []),
     ...(!colorImages ? [product.images.cover, ...(product.images.gallery ?? [])] : []),
   ];
-  // Deduplicate
   const uniqueImages = [...new Set(images)];
   const hasMultiple = uniqueImages.length > 1;
 
-  // Reset image index when colour changes
   useEffect(() => { setImgIdx(0); }, [selectedColor]);
-
-  // Escape to close
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     document.addEventListener('keydown', handler);
@@ -88,7 +75,6 @@ function ProductModal({
         className="relative flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-lg bg-white shadow-xl md:flex-row"
         onClick={e => e.stopPropagation()}
       >
-        {/* Close */}
         <button
           onClick={onClose}
           className="absolute right-3 top-3 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-black/40 text-white transition-colors hover:bg-black/60"
@@ -97,7 +83,6 @@ function ProductModal({
           ×
         </button>
 
-        {/* Image carousel */}
         <div className="relative w-full shrink-0 bg-charcoal/5 md:w-1/2" style={{ aspectRatio: '1 / 1' }}>
           {uniqueImages[imgIdx] && (
             <Image
@@ -110,7 +95,6 @@ function ProductModal({
           )}
           {hasMultiple && (
             <>
-              {/* Prev / Next arrows */}
               <button
                 onClick={() => setImgIdx(i => (i - 1 + uniqueImages.length) % uniqueImages.length)}
                 className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-black/40 px-2 py-1 text-xs text-white hover:bg-black/60"
@@ -125,7 +109,6 @@ function ProductModal({
               >
                 ›
               </button>
-              {/* Dots */}
               <div className="absolute bottom-2 left-1/2 flex -translate-x-1/2 gap-1.5">
                 {uniqueImages.map((_, i) => (
                   <button
@@ -142,14 +125,12 @@ function ProductModal({
           )}
         </div>
 
-        {/* Details */}
         <div className="flex flex-1 flex-col p-5">
           <p className="text-xs font-medium uppercase tracking-widest text-terra">University</p>
           <h2 className="mt-1 text-xl font-bold tracking-tight text-charcoal">{product.name}</h2>
           <p className="mt-1 text-lg font-semibold text-charcoal">{priceFmt(product.price)}</p>
           <p className="mt-3 text-sm leading-relaxed text-charcoal/60">{product.description}</p>
 
-          {/* Colors */}
           {product.colors.length > 1 && (
             <div className="mt-4">
               <p className="mb-1.5 text-xs font-medium uppercase tracking-wider text-charcoal/50">Colour</p>
@@ -171,7 +152,6 @@ function ProductModal({
             </div>
           )}
 
-          {/* Sizes */}
           {product.sizes.length > 1 && (
             <div className="mt-3">
               <p className="mb-1.5 text-xs font-medium uppercase tracking-wider text-charcoal/50">Size</p>
@@ -193,14 +173,12 @@ function ProductModal({
             </div>
           )}
 
-          {/* Details */}
           {product.details.length > 0 && (
             <ul className="mt-4 space-y-1 text-xs text-charcoal/50">
               {product.details.map((d, i) => <li key={i}>• {d}</li>)}
             </ul>
           )}
 
-          {/* Actions */}
           <div className="mt-auto flex gap-2 pt-5">
             <button
               onClick={handleAddToCart}
@@ -221,82 +199,41 @@ function ProductModal({
   );
 }
 
-export default function UniversityShopContent({ products, discounts }: { products: Product[]; discounts: Record<string, number> }) {
+export default function UniversityShopSection({ products }: { products: Product[] }) {
   const [modalProduct, setModalProduct] = useState<Product | null>(null);
 
-  // Lock body scroll when modal open
   useEffect(() => {
     if (modalProduct) document.body.style.overflow = 'hidden';
     else document.body.style.overflow = '';
     return () => { document.body.style.overflow = ''; };
   }, [modalProduct]);
 
-  return (
-    <div className="flex min-h-dvh flex-col bg-cream">
-      {/* ── Co-branded header ── */}
-      <header className="shrink-0 border-b border-charcoal/10 bg-cream">
-        <div className="flex items-center justify-center gap-3 px-4 py-5">
-          <Link href="/university" className="flex items-center gap-3">
-            <Logo className="h-8 w-auto text-charcoal/80" />
-            <span className="text-sm text-charcoal/40">x</span>
-            <div
-              role="img"
-              aria-label="Arts University Bournemouth"
-              className="h-5 w-[6.5rem] bg-charcoal/80"
-              style={{
-                WebkitMaskImage: 'url(/images/aub-logo-white.svg)',
-                maskImage: 'url(/images/aub-logo-white.svg)',
-                WebkitMaskRepeat: 'no-repeat',
-                maskRepeat: 'no-repeat',
-                WebkitMaskSize: 'contain',
-                maskSize: 'contain',
-                WebkitMaskPosition: 'center',
-                maskPosition: 'center',
-              }}
-            />
-          </Link>
-        </div>
-      </header>
+  if (products.length === 0) return null;
 
-      {/* ── Shop ── */}
-      <div className="mx-auto w-full max-w-5xl flex-1 px-4 py-10">
-        <div className="mb-10">
+  return (
+    <>
+      <section className="mx-auto max-w-6xl px-6 py-24">
+        <div className="mb-10 text-center">
           <p className="mb-1 text-xs font-medium uppercase tracking-widest text-terra">University Collection</p>
-          <h1 className="text-4xl font-bold tracking-tight text-charcoal">The Break × AUB</h1>
+          <h2 className="font-display text-3xl font-medium text-charcoal">Shop pre-made items</h2>
           <p className="mt-2 text-sm text-charcoal/60">
-            Pre-made university branded garments, ready to go.
+            Don&rsquo;t have a garment to drop off? Grab a ready-made uni branded piece instead.
           </p>
         </div>
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+          {products.map(product => (
+            <UniProductCard
+              key={product.id}
+              product={product}
+              onClick={() => setModalProduct(product)}
+            />
+          ))}
+        </div>
+      </section>
 
-        {products.length === 0 ? (
-          <p className="text-sm text-charcoal/50">No university products yet.</p>
-        ) : (
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-            {products.map(product => (
-              <UniProductCard
-                key={product.id}
-                product={product}
-                onClick={() => setModalProduct(product)}
-              />
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* ── Footer ── */}
-      <footer className="shrink-0 border-t border-charcoal/10 px-4 py-6 text-center">
-        <p className="text-xs text-charcoal/40">
-          Questions? Email{' '}
-          <a href="mailto:nathan@thebreaksurf.co.uk" className="underline underline-offset-2 hover:text-charcoal">
-            nathan@thebreaksurf.co.uk
-          </a>
-        </p>
-      </footer>
-
-      {/* ── Modal ── */}
       {modalProduct && (
         <ProductModal product={modalProduct} onClose={() => setModalProduct(null)} />
       )}
-    </div>
+    </>
   );
 }

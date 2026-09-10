@@ -1,6 +1,9 @@
 import Image from 'next/image';
 import { getHero } from '@/lib/heroes';
+import { readData } from '@/lib/dataCache';
+import type { Product } from '@/types';
 import UniversityDropoffForm from '@/components/UniversityDropoffForm';
+import UniversityShopSection from '@/components/UniversityShopSection';
 
 export const metadata = {
   title: 'The Break x AUB',
@@ -28,6 +31,8 @@ const STEPS = [
 
 export default async function UniversityPage() {
   const hero = (await getHero('university'))!;
+  const allProducts = await readData<Product>('products');
+  const uniProducts = allProducts.filter(p => p.category === 'University');
   return (
     <>
       {/* Hero */}
@@ -97,6 +102,9 @@ export default async function UniversityPage() {
         </div>
         <UniversityDropoffForm />
       </section>
+
+      {/* Shop */}
+      <UniversityShopSection products={uniProducts} />
 
       {/* Contact */}
       <section className="border-t border-charcoal/10 px-6 py-16 text-center">
