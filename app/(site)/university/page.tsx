@@ -111,12 +111,12 @@ export default async function UniversityPage() {
         <div className="mx-auto max-w-3xl px-6 py-20 text-center">
           <p className="mb-3 text-xs font-medium uppercase tracking-[0.25em] text-charcoal/40">Societies &amp; Sports</p>
           <h2 className="font-display text-3xl font-medium leading-relaxed text-charcoal">
-            We&rsquo;re AUB&rsquo;s official clothing supplier for every society and sports team.
+            Made for AUB. By AUB Students.
           </h2>
           <p className="mt-4 text-sm leading-relaxed text-charcoal/60">
-            Custom kit, merch, and team wear — designed locally, ethically made, and printed by us.
-            Whether you need 10 hoodies for your climbing club or 200 tees for freshers&rsquo; week,
-            we&rsquo;ll sort it.
+            Last year, we supplied over 100 shirts, hoodies, and totes to societies across the university.
+            Every piece was <strong>printed by hand</strong> in our flat by students — keeping production
+            local, personal, and a little different from your usual merch supplier.
           </p>
           <a
             href="mailto:nathan@thebreaksurf.co.uk"
