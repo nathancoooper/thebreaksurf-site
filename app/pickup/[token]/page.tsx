@@ -256,38 +256,38 @@ export default function PickupPage({ params }: { params: Promise<{ token: string
             <p className="mt-3 text-xs text-charcoal/40">Bring your name — we&apos;ll have your {data.garment} ready.</p>
           </div>
         ) : (
-          <div className="rounded-sm border border-charcoal/10 bg-white p-6 md:p-8">
-            {/* ── Header block ── */}
-            <div className="border-b border-charcoal/10 pb-6">
-              <h1 className="text-2xl font-bold tracking-tight text-charcoal">Pick up your garment</h1>
-              <p className="mt-2 text-sm leading-relaxed text-charcoal/60">
-                Hey {data.studentName || 'there'}! Just letting you know your {data.garment || 'garment'} is ready for collection. Book a slot below.
-              </p>
-            </div>
-
-            {/* ── Progress ── */}
+          <div>
+            {/* ── Progress (above the card) ── */}
             {data.status !== 'submitted' && (
-              <div className="mt-5">
+              <div className="mb-5">
                 <ProgressBar status={data.status} />
               </div>
             )}
+            <div className="rounded-sm border border-charcoal/10 bg-white p-6 md:p-8">
+              {/* ── Header block ── */}
+              <div className="border-b border-charcoal/10 pb-6">
+                <h1 className="text-2xl font-bold tracking-tight text-charcoal">Pick up your garment</h1>
+                <p className="mt-2 text-sm leading-relaxed text-charcoal/60">
+                  Hey {data.studentName || 'there'}! Just letting you know your {data.garment || 'garment'} is ready for collection. Book a slot below.
+                </p>
+              </div>
 
-            {/* ── Month + times ── */}
-            <div className="mt-6 grid gap-8 sm:grid-cols-2">
-              <div>
-                <div className="mb-2 flex items-center justify-between">
-                  <p className="text-lg font-bold tracking-tight text-charcoal">
-                    {new Date(monthCursor.y, monthCursor.m, 1).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}
-                  </p>
-                  <div className="flex gap-2">
-                    <button onClick={() => setMonthCursor(c => ({ y: c.m === 0 ? c.y - 1 : c.y, m: (c.m + 11) % 12 }))}
-                      disabled={!canPrev} aria-label="Previous month"
-                      className="rounded-sm border border-charcoal/20 px-2.5 py-0.5 text-charcoal transition-colors hover:border-charcoal/50 disabled:opacity-30">‹</button>
-                    <button onClick={() => setMonthCursor(c => ({ y: c.m === 11 ? c.y + 1 : c.y, m: (c.m + 1) % 12 }))}
-                      disabled={!canNext} aria-label="Next month"
-                      className="rounded-sm border border-charcoal/20 px-2.5 py-0.5 text-charcoal transition-colors hover:border-charcoal/50 disabled:opacity-30">›</button>
+              {/* ── Month + times ── */}
+              <div className="mt-6 grid gap-8 sm:grid-cols-2">
+                <div>
+                  <div className="mb-2 flex items-center justify-between">
+                    <p className="text-lg font-bold tracking-tight text-charcoal">
+                      {new Date(monthCursor.y, monthCursor.m, 1).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}
+                    </p>
+                    <div className="flex gap-2">
+                      <button onClick={() => setMonthCursor(c => ({ y: c.m === 0 ? c.y - 1 : c.y, m: (c.m + 11) % 12 }))}
+                        disabled={!canPrev} aria-label="Previous month"
+                        className="rounded-sm border border-charcoal/20 px-2.5 py-0.5 text-charcoal transition-colors hover:border-charcoal/50 disabled:opacity-30">‹</button>
+                      <button onClick={() => setMonthCursor(c => ({ y: c.m === 11 ? c.y + 1 : c.y, m: (c.m + 1) % 12 }))}
+                        disabled={!canNext} aria-label="Next month"
+                        className="rounded-sm border border-charcoal/20 px-2.5 py-0.5 text-charcoal transition-colors hover:border-charcoal/50 disabled:opacity-30">›</button>
+                    </div>
                   </div>
-                </div>
                 <div className="grid grid-cols-7 text-center text-[11px] font-medium text-charcoal/40">
                   {['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'].map(d => <div key={d} className="py-1">{d}</div>)}
                 </div>
@@ -371,8 +371,9 @@ export default function PickupPage({ params }: { params: Promise<{ token: string
                   </a>{' '}
                   and we&apos;ll find a time.
                 </p>
-              </div>
+               </div>
             </div>
+          </div>
           </div>
         )}
         {data?.currentSlotId && !done && (
