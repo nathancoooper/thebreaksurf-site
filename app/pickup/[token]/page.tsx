@@ -91,7 +91,7 @@ function ProgressBar({ status }: { status: SubmissionStatus }) {
   return (
     <div className="relative flex items-start px-3">
       {/* Connector line — sits behind circles */}
-      <div className="absolute top-[6px] left-3 right-3 h-[2px] z-0">
+      <div className="absolute top-[11px] left-3 right-3 h-[2px] z-0">
         <div className="flex h-full">
           <div style={{ flex: currentIdx }} className="bg-forest" />
           <div style={{ flex: PIPELINE.length - 1 - currentIdx }} className="bg-charcoal/10" />
@@ -102,12 +102,12 @@ function ProgressBar({ status }: { status: SubmissionStatus }) {
         const current = i === currentIdx;
         return (
           <div key={step.key} className="flex flex-1 flex-col items-center relative z-10">
-            <div className={`flex h-3 w-3 items-center justify-center rounded-full text-[8px] font-bold ${
+            <div className={`flex h-[22px] w-[22px] items-center justify-center rounded-full text-[11px] font-bold ${
               done || current ? 'bg-amber text-[#F5EFE5]' : 'bg-charcoal/15 text-charcoal/30'
             }`}>
               {i + 1}
             </div>
-            <span className={`mt-1.5 text-[10px] leading-tight text-center ${
+            <span className={`mt-1.5 text-[11px] leading-tight text-center ${
               done || current ? 'font-medium text-charcoal' : 'text-charcoal/35'
             }`}>{step.label}</span>
           </div>
