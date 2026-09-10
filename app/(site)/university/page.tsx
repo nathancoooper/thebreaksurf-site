@@ -106,6 +106,27 @@ export default async function UniversityPage() {
       {/* Shop */}
       <UniversityShopSection products={uniProducts} />
 
+      {/* Societies & sports */}
+      <section className="border-y border-charcoal/10 bg-moss/5">
+        <div className="mx-auto max-w-3xl px-6 py-20 text-center">
+          <p className="mb-3 text-xs font-medium uppercase tracking-[0.25em] text-charcoal/40">Societies &amp; Sports</p>
+          <h2 className="font-display text-3xl font-medium leading-relaxed text-charcoal">
+            We&rsquo;re AUB&rsquo;s official clothing supplier for every society and sports team.
+          </h2>
+          <p className="mt-4 text-sm leading-relaxed text-charcoal/60">
+            Custom kit, merch, and team wear — designed locally, ethically made, and printed by us.
+            Whether you need 10 hoodies for your climbing club or 200 tees for freshers&rsquo; week,
+            we&rsquo;ll sort it.
+          </p>
+          <a
+            href="mailto:nathan@thebreaksurf.co.uk"
+            className="mt-8 inline-block rounded-sm border border-charcoal/20 px-8 py-3.5 text-sm font-medium text-charcoal transition-all hover:border-charcoal/50 hover:bg-charcoal/5"
+          >
+            Get in touch
+          </a>
+        </div>
+      </section>
+
       {/* Contact */}
       <section className="border-t border-charcoal/10 px-6 py-16 text-center">
         <p className="text-sm text-charcoal/60">
