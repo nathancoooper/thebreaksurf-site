@@ -110,12 +110,12 @@ export default async function UniversityPage() {
       <section className="border-y border-charcoal/10 bg-moss/5">
         <div className="mx-auto max-w-3xl px-6 py-20 text-center">
           <p className="mb-3 text-xs font-medium uppercase tracking-[0.25em] text-charcoal/40">Societies &amp; Sports</p>
-          <h2 className="font-display text-3xl font-medium leading-relaxed text-charcoal">
+          <h2 className="text-3xl font-bold tracking-tight text-charcoal">
             Made for AUB. By AUB Students.
           </h2>
           <p className="mt-4 text-sm leading-relaxed text-charcoal/60">
             Last year, we supplied over 100 shirts, hoodies, and totes to societies across the university.
-            Every piece was <strong>printed by hand</strong> in our flat by students — keeping production
+            Every piece was <strong>printed by hand in our flat by students</strong> — keeping production
             local, personal, and a little different from your usual merch supplier.
           </p>
           <a
