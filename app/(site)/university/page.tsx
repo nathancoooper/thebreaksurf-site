@@ -65,7 +65,7 @@ export default async function UniversityPage() {
               </a>
               <a
                 href="#uni-shop"
-                className="inline-block rounded-sm bg-cream px-8 py-3.5 text-sm font-medium text-charcoal transition-all hover:bg-cream/90"
+                className="inline-block rounded-sm border border-cream/30 px-8 py-3.5 text-sm font-medium text-cream transition-all hover:border-cream/70 hover:bg-cream/10"
               >
                 Shop pre-made
               </a>
