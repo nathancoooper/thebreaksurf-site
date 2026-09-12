@@ -17,7 +17,7 @@ export const metadata = {
 export const revalidate = 300;
 
 export default async function ShopPage() {
-  const allProducts = await readData<Product>('products');
+  const allProducts = (await readData<Product>('products')).filter(p => p.category !== 'University');
   const discounts = await getDiscountMap(allProducts.map(p => p.id));
   return (
     <Suspense fallback={<ShopGrid allProducts={allProducts} category={null} discounts={discounts} />}>

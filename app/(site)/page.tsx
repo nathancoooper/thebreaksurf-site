@@ -12,7 +12,7 @@ import { faTree, faWind, faInfinity } from '@fortawesome/free-solid-svg-icons';
 export const dynamic = 'force-dynamic';
 
 export default async function HomePage() {
-  const allProductsList = await readData<Product>('products');
+  const allProductsList = (await readData<Product>('products')).filter(p => p.category !== 'University');
   const postsData = await getAllPosts();
   const eventsData = await readData<Event>('events');
 

@@ -12,7 +12,7 @@ export const dynamic = 'force-dynamic';
 
 export default async function SiteLayout({ children }: { children: React.ReactNode }) {
   const productsData = await readData<{ category?: string }>('products');
-  const categories = [...new Set(productsData.map(p => p.category).filter(Boolean))] as string[];
+  const categories = [...new Set(productsData.map(p => p.category).filter((c): c is string => Boolean(c) && c !== 'University'))];
 
   return (
     <CartProvider>
