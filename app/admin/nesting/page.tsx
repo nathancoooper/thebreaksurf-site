@@ -245,7 +245,10 @@ export default function NestingPage() {
     // Draw a transparency checkerboard instead, which is both readable and
     // closer to what the film actually looks like. Colours come from CSS vars
     // so the preview matches whichever theme the page is in.
-    const css = getComputedStyle(document.documentElement);
+    // Read from the canvas itself: the theme's variables are scoped to the
+    // staff-panel wrapper (.tbs-dark-surface), and custom properties inherit,
+    // so this picks up the dark values when the page is in dark mode.
+    const css = getComputedStyle(canvas);
     const varOr = (name: string, fallback: string) => css.getPropertyValue(name).trim() || fallback;
     const CHECK = PX_PER_CM / 2; // 0.5 cm squares
     ctx.fillStyle = varOr('--tbs-checker-a', '#ffffff');
