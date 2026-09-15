@@ -17,7 +17,7 @@ const MAX_PX = 12000;
 // Ink is measured on a downscaled copy, so the crop is padded by the scale
 // factor: that way measurement error can only ever add margin, never clip
 // artwork.
-const MEASURE_EDGE = 1024;
+const MEASURE_EDGE = 2048;
 // Image sent to the dialog; the reported width/height stay the true ones.
 const PREVIEW_EDGE = 320;
 
@@ -95,9 +95,11 @@ async function inkBox(png: Buffer, width: number, height: number, pad = true): P
 
     const toFullX = (v: number) => Math.round((v / sw) * width);
     const toFullY = (v: number) => Math.round((v / sh) * height);
-    // Pad by at least one measure-pixel so rounding can't shave the artwork.
-    // Previews skip it: there the ratio matters more than a couple of pixels.
-    const margin = pad ? Math.ceil(width / sw) + 2 : 0;
+    // Pad by one measure-pixel so rounding can't shave the artwork: that is
+    // the measurement's own error, and keeping it tight matters for short
+    // artwork, where a few pixels are a large share of the height. Previews
+    // skip it entirely - there the ratio matters more than a pixel or two.
+    const margin = pad ? Math.ceil(width / sw) + 1 : 0;
 
     const box: Box = {
       x: Math.max(0, toFullX(sx0) - margin),
