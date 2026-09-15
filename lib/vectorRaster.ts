@@ -14,6 +14,10 @@ export const VECTOR_EXTS = new Set(['.eps', '.ps', '.ai', '.pdf']);
 const BASE_DPI = 300;
 const MAX_DPI = 1200;
 const MAX_PX = 12000;
+// Ink is measured on a downscaled copy, so the crop is padded by the scale
+// factor: that way measurement error can only ever add margin, never clip
+// artwork.
+const MEASURE_EDGE = 1024;
 
 export function isVectorFile(filename: string): boolean {
   const ext = filename.includes('.') ? '.' + filename.split('.').pop()!.toLowerCase() : '';
@@ -35,7 +39,7 @@ async function ghostscript(input: Buffer, dpi: number): Promise<Buffer | null> {
     await run('gs', [
       '-dSAFER', '-dBATCH', '-dNOPAUSE', '-dQUIET',
       '-sDEVICE=pngalpha',      // transparent background, what DTF wants
-      '-dEPSCrop',              // honour the artwork's own bounding box
+      '-dEPSCrop',              // honour the artwork's own artboard
       '-dTextAlphaBits=4', '-dGraphicsAlphaBits=4',
       `-r${Math.round(dpi)}`,
       `-sOutputFile=${outPath}`,
@@ -51,11 +55,105 @@ async function ghostscript(input: Buffer, dpi: number): Promise<Buffer | null> {
   }
 }
 
+interface Box { x: number; y: number; width: number; height: number }
+
 /**
- * Rasterises an EPS/AI/PDF to a transparent PNG at print resolution.
- * When the physical print size is known we scale up so a small bounding box
- * still yields enough pixels for the real print, rather than letting the
- * nesting canvas upscale a low-res bitmap.
+ * Finds the artwork's real extent inside the artboard by reading the alpha
+ * channel, so blank margins can be cropped away. Returns null when the file
+ * can't be measured (in which case the untrimmed raster is used).
+ */
+async function inkBox(png: Buffer, width: number, height: number): Promise<Box | null> {
+  const dir = await mkdtemp(path.join(tmpdir(), 'measure-'));
+  const inPath = path.join(dir, 'in.png');
+  try {
+    await writeFile(inPath, png);
+    const scale = width > MEASURE_EDGE ? Math.round(MEASURE_EDGE) : 0;
+    const args = ['-v', 'error', '-i', inPath];
+    if (scale) args.push('-vf', `scale=${scale}:-1`);
+    args.push('-f', 'rawvideo', '-pix_fmt', 'rgba', '-');
+    const { stdout } = await run('ffmpeg', args, { encoding: 'buffer', maxBuffer: 256 * 1024 * 1024, timeout: 120_000 });
+
+    const sw = scale || width;
+    const sh = Math.floor(stdout.length / (sw * 4));
+    if (!sh) return null;
+
+    let sx0 = sw, sy0 = sh, sx1 = -1, sy1 = -1;
+    for (let y = 0; y < sh; y++) {
+      const row = y * sw * 4;
+      for (let x = 0; x < sw; x++) {
+        if (stdout[row + x * 4 + 3] > 8) {
+          if (x < sx0) sx0 = x;
+          if (x > sx1) sx1 = x;
+          if (y < sy0) sy0 = y;
+          if (y > sy1) sy1 = y;
+        }
+      }
+    }
+    if (sx1 < 0) return null; // fully transparent
+
+    const toFullX = (v: number) => Math.round((v / sw) * width);
+    const toFullY = (v: number) => Math.round((v / sh) * height);
+    // Pad by at least one measure-pixel so rounding can't shave the artwork.
+    const pad = Math.ceil(width / sw) + 2;
+
+    const box: Box = {
+      x: Math.max(0, toFullX(sx0) - pad),
+      y: Math.max(0, toFullY(sy0) - pad),
+      width: 0,
+      height: 0,
+    };
+    box.width = Math.min(width - box.x, toFullX(sx1) - box.x + 1 + pad);
+    box.height = Math.min(height - box.y, toFullY(sy1) - box.y + 1 + pad);
+    if (box.width < 1 || box.height < 1) return null;
+    return box;
+  } catch (error) {
+    console.error('[vectorRaster] ink measurement failed:', error);
+    return null;
+  } finally {
+    await rm(dir, { recursive: true, force: true }).catch(() => {});
+  }
+}
+
+async function cropPng(png: Buffer, box: Box): Promise<Buffer | null> {
+  const dir = await mkdtemp(path.join(tmpdir(), 'crop-'));
+  const inPath = path.join(dir, 'in.png');
+  const outPath = path.join(dir, 'out.png');
+  try {
+    await writeFile(inPath, png);
+    await run('ffmpeg', [
+      '-v', 'error', '-i', inPath,
+      '-vf', `crop=${box.width}:${box.height}:${box.x}:${box.y}`,
+      '-frames:v', '1', '-y', outPath,
+    ], { timeout: 120_000, maxBuffer: 8 * 1024 * 1024 });
+    const out = await readFile(outPath);
+    return out.length ? out : null;
+  } catch (error) {
+    console.error('[vectorRaster] crop failed:', error);
+    return null;
+  } finally {
+    await rm(dir, { recursive: true, force: true }).catch(() => {});
+  }
+}
+
+/** Crops the blank artboard margins, falling back to the original raster. */
+export async function trimToArtwork(png: Buffer): Promise<{ png: Buffer; width: number; height: number } | null> {
+  const size = pngSize(png);
+  if (!size) return null;
+  const box = await inkBox(png, size.width, size.height);
+  if (!box || (box.width >= size.width && box.height >= size.height)) {
+    return { png, width: size.width, height: size.height };
+  }
+  const cropped = await cropPng(png, box);
+  if (!cropped) return { png, width: size.width, height: size.height };
+  const croppedSize = pngSize(cropped);
+  return { png: cropped, width: croppedSize?.width ?? size.width, height: croppedSize?.height ?? size.height };
+}
+
+/**
+ * Rasterises an EPS/AI/PDF to a transparent, margin-trimmed PNG at print
+ * resolution. When the print size is known the raster is scaled so the
+ * *artwork* (not the artboard) matches it, which is what the size really means
+ * to whoever is printing it.
  */
 export async function rasteriseVector(
   source: Buffer,
@@ -64,29 +162,35 @@ export async function rasteriseVector(
   const first = await ghostscript(source, BASE_DPI);
   if (!first) return null;
 
-  const size = pngSize(first);
-  const targetW = opts.widthCm && opts.widthCm > 0 ? (opts.widthCm / 2.54) * BASE_DPI : 0;
-  if (!size || !size.width || !targetW) return first;
+  const firstSize = pngSize(first);
+  const box = firstSize ? await inkBox(first, firstSize.width, firstSize.height) : null;
 
-  // DPI that would make the raster match the print size in pixels, bounded by
-  // the DPI cap and the maximum pixel width.
-  const neededDpi = BASE_DPI * (targetW / size.width);
-  const dpi = Math.min(neededDpi, MAX_DPI, (BASE_DPI * MAX_PX) / size.width);
-  if (dpi <= BASE_DPI * 1.05) return first;
+  // Work out whether the artwork has enough pixels for the requested print
+  // width once the margins are gone, and re-render at a higher DPI if not.
+  let raster = first;
+  if (firstSize && box && opts.widthCm && opts.widthCm > 0) {
+    const targetW = (opts.widthCm / 2.54) * BASE_DPI;
+    const neededDpi = BASE_DPI * (targetW / box.width);
+    const dpi = Math.min(neededDpi, MAX_DPI, (BASE_DPI * MAX_PX) / box.width);
+    if (dpi > BASE_DPI * 1.05) {
+      const second = await ghostscript(source, dpi);
+      if (second) raster = second;
+    }
+  }
 
-  const second = await ghostscript(source, dpi);
-  return second ?? first;
+  const trimmed = await trimToArtwork(raster);
+  return trimmed?.png ?? raster;
 }
 
 /**
- * Low-resolution raster used to preview vector artwork and to learn its aspect
- * ratio while the dialog is still open — the browser cannot decode EPS/AI/PDF
- * itself, so without this the print dimensions can't auto-fill.
+ * Low-resolution raster used to preview vector artwork and to learn the
+ * artwork's proportions while the dialog is still open — the browser cannot
+ * decode EPS/AI/PDF itself, so without this neither the preview nor the
+ * dimension auto-fill is possible. Trimmed for the same reason as the full
+ * raster: the proportions must match what actually gets printed.
  */
 export async function rasteriseVectorPreview(source: Buffer, dpi = 72): Promise<{ png: Buffer; width: number; height: number } | null> {
   const png = await ghostscript(source, dpi);
   if (!png) return null;
-  const size = pngSize(png);
-  if (!size || !size.width || !size.height) return null;
-  return { png, width: size.width, height: size.height };
+  return trimToArtwork(png);
 }
