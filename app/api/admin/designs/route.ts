@@ -8,6 +8,7 @@ export interface Design {
   printType: string;
   color: string;
   imagePath: string;
+  sourcePath?: string;
   widthCm: number;
   heightCm: number;
   createdAt: string;
@@ -32,6 +33,7 @@ export async function POST(req: NextRequest) {
     printType: body.printType.trim(),
     color: body.color.trim(),
     imagePath: body.imagePath,
+    sourcePath: body.sourcePath ? String(body.sourcePath) : undefined,
     widthCm: Number(body.widthCm),
     heightCm: Number(body.heightCm),
     createdAt: new Date().toISOString(),

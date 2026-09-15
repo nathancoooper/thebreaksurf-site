@@ -8,6 +8,7 @@ interface Design {
   printType: string;
   color: string;
   imagePath: string;
+  sourcePath?: string;
   widthCm: number;
   heightCm: number;
   createdAt: string;
@@ -27,9 +28,19 @@ function AddDesignModal({ onClose, onCreated }: { onClose: () => void; onCreated
   const [aspectRatio, setAspectRatio] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // EPS/AI/PDF can't be drawn by the browser, so it is rasterised server-side.
+  const [isVector, setIsVector] = useState(false);
 
   function pickFile(f: File) {
     setFile(f);
+    const vector = /\.(eps|ai|ps|pdf)$/i.test(f.name);
+    setIsVector(vector);
+    setAspectRatio(null);
+    if (vector) {
+      // No object-URL preview is possible; the PNG appears once uploaded.
+      setPreview(null);
+      return;
+    }
     const url = URL.createObjectURL(f);
     setPreview(url);
     const img = new Image();
@@ -66,15 +77,23 @@ function AddDesignModal({ onClose, onCreated }: { onClose: () => void; onCreated
     const form = new FormData();
     form.append('file', file);
     form.append('type', 'designs');
+    // The rasteriser needs the physical print size to produce enough pixels.
+    form.append('widthCm', String(w));
+    form.append('heightCm', String(h));
     const uploadRes = await fetch('/api/admin/upload', { method: 'POST', credentials: 'include', body: form });
-    if (!uploadRes.ok) { setError('Upload failed.'); setSaving(false); return; }
-    const { path: imagePath } = await uploadRes.json();
+    if (!uploadRes.ok) {
+      const detail = await uploadRes.json().catch(() => null);
+      setError(detail?.error ?? 'Upload failed.');
+      setSaving(false);
+      return;
+    }
+    const { path: imagePath, sourcePath } = await uploadRes.json();
 
     const createRes = await fetch('/api/admin/designs', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
-      body: JSON.stringify({ garmentName: garmentName.trim(), printType: printType.trim(), color: color.trim(), imagePath, widthCm: w, heightCm: h }),
+      body: JSON.stringify({ garmentName: garmentName.trim(), printType: printType.trim(), color: color.trim(), imagePath, sourcePath, widthCm: w, heightCm: h }),
     });
     if (!createRes.ok) { setError("Uploaded, but couldn't save the design record."); setSaving(false); return; }
     onCreated(await createRes.json());
@@ -93,13 +112,13 @@ function AddDesignModal({ onClose, onCreated }: { onClose: () => void; onCreated
         <div className="flex-1 overflow-auto p-6">
           <div className="space-y-4">
             <label className="block">
-              <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-gray-400">Image</span>
+              <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-gray-400">Artwork</span>
               {preview ? (
                 <img src={preview} alt="" className="mb-2 h-32 w-full rounded-lg border border-gray-200 object-contain bg-gray-50" />
               ) : null}
               <input
                 type="file"
-                accept="image/*"
+                accept="image/*,.eps,.ai,.ps,.pdf,application/postscript,application/pdf,application/illustrator"
                 onChange={e => { const f = e.target.files?.[0]; if (f) pickFile(f); }}
                 className="w-full text-xs text-gray-500 file:mr-3 file:rounded-lg file:border-0 file:bg-gray-100 file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-gray-700 hover:file:bg-gray-200"
               />
@@ -133,7 +152,12 @@ function AddDesignModal({ onClose, onCreated }: { onClose: () => void; onCreated
                   className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 focus:border-gray-400 focus:outline-none" />
               </label>
             </div>
-            <p className="text-xs text-gray-400">Enter the actual physical size this design prints at, not the image file's pixel dimensions — this is what the nesting tool uses to fit designs onto a sheet. Choose an image first and the other dimension will fill in automatically from its proportions.</p>
+            {isVector && (
+              <p className="rounded-lg bg-blue-50 px-3 py-2 text-xs text-blue-700">
+                EPS / AI / PDF artwork is converted to a 300&nbsp;DPI transparent PNG on upload so it renders in designs and nesting sheets. The original file is kept.
+              </p>
+            )}
+            <p className="text-xs text-gray-400">Enter the actual physical size this design prints at, not the image file's pixel dimensions — this is what the nesting tool uses to fit designs onto a sheet.{isVector ? '' : ' Choose an image first and the other dimension will fill in automatically from its proportions.'}</p>
             {error && <p className="text-xs text-red-600">{error}</p>}
           </div>
         </div>

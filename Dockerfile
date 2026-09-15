@@ -26,7 +26,7 @@ WORKDIR /app
 ENV NODE_ENV=production
 
 RUN addgroup -S nodejs && adduser -S nextjs -G nodejs
-RUN apk add --no-cache ffmpeg su-exec
+RUN apk add --no-cache ffmpeg su-exec ghostscript
 
 # Standalone output bundles only what's needed to run
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./

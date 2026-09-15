@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdminFromRequest, unauthorised } from '@/lib/adminAuth';
 import { uploadToR2, listR2Files, deleteFromR2 } from '@/lib/r2';
+import { isVectorFile, rasteriseVector } from '@/lib/vectorRaster';
 
 // Safari downloads video/quicktime as .qt — normalise to common extensions.
 const MIME_EXT: Record<string, string> = {
@@ -98,13 +99,32 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   }
 
   const key = `${subdir}/${filename}`;
-  const content = await file.arrayBuffer();
+  const content = Buffer.from(await file.arrayBuffer());
 
   try {
     await uploadToR2(key, content, file.type);
   } catch (err) {
     console.error('[upload] R2 upload error:', err);
     return NextResponse.json({ error: 'Upload failed' }, { status: 500 });
+  }
+
+  // EPS/AI/PDF cannot be drawn by a browser, so rasterise to a PNG the design
+  // grid and nesting canvas can actually use. The original is kept as source.
+  if (isVectorFile(filename)) {
+    const png = await rasteriseVector(content, {
+      widthCm: Number(fields.widthCm) || undefined,
+      heightCm: Number(fields.heightCm) || undefined,
+    });
+    if (!png) {
+      await deleteFromR2(key).catch(() => {});
+      return NextResponse.json(
+        { error: "Couldn't read that file. Re-export it from Illustrator as an EPS with the artwork on the artboard, or upload a PNG." },
+        { status: 422 },
+      );
+    }
+    const pngKey = key.replace(/\.[a-z0-9]+$/i, '.png');
+    await uploadToR2(pngKey, png, 'image/png');
+    return NextResponse.json({ path: `/api/r2/${pngKey}`, sourcePath: `/api/r2/${key}` });
   }
 
   return NextResponse.json({ path: `/api/r2/${key}` });
