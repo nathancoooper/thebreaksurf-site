@@ -198,6 +198,22 @@ a {
   --tbs-checker-b: #ececec;
   --tbs-sheet-line: #eab308;
 }
+/* Preview backdrop for the nesting sheet: the sheet itself is clear film, and
+   this fills the whole preview box so the sheet boundary (drawn on the canvas)
+   is what marks the printable area. */
+.nesting-preview {
+  background-color: var(--tbs-checker-a, #ffffff);
+  background-image:
+    linear-gradient(45deg, var(--tbs-checker-b, #ececec) 25%, transparent 25%),
+    linear-gradient(-45deg, var(--tbs-checker-b, #ececec) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, var(--tbs-checker-b, #ececec) 75%),
+    linear-gradient(-45deg, transparent 75%, var(--tbs-checker-b, #ececec) 75%);
+  background-size: 20px 20px;
+  background-position: 0 0, 0 10px, 10px -10px, -10px 0;
+  /* Scrolls with the sheet rather than staying pinned to the box. */
+  background-attachment: local;
+}
+
 html[data-tbs-theme-resolved='dark'] .tbs-dark-surface {
   --tbs-checker-a: #111111;
   --tbs-checker-b: #1c1c1c;

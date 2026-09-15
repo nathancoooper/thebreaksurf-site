@@ -240,25 +240,11 @@ export default function NestingPage() {
     canvas.width = result.sheetWidthCm * PX_PER_CM;
     canvas.height = result.sheetHeightCm * PX_PER_CM;
 
-    // The sheet is clear DTF film and the artwork on it is very often white,
-    // so a plain white background made a correctly-packed sheet look empty.
-    // Draw a transparency checkerboard instead, which is both readable and
-    // closer to what the film actually looks like. Colours come from CSS vars
-    // so the preview matches whichever theme the page is in.
-    // Read from the canvas itself: the theme's variables are scoped to the
-    // staff-panel wrapper (.tbs-dark-surface), and custom properties inherit,
-    // so this picks up the dark values when the page is in dark mode.
-    const css = getComputedStyle(canvas);
-    const varOr = (name: string, fallback: string) => css.getPropertyValue(name).trim() || fallback;
-    const CHECK = PX_PER_CM / 2; // 0.5 cm squares
-    ctx.fillStyle = varOr('--tbs-checker-a', '#ffffff');
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = varOr('--tbs-checker-b', '#ececec');
-    for (let row = 0; row * CHECK < canvas.height; row++) {
-      for (let col = 0; col * CHECK < canvas.width; col++) {
-        if ((row + col) % 2 === 0) ctx.fillRect(col * CHECK, row * CHECK, CHECK, CHECK);
-      }
-    }
+    // The checkerboard is the box's backdrop (see .nesting-preview), so the
+    // canvas stays transparent and only carries the artwork and the sheet
+    // outline — that way the backdrop covers the whole panel rather than just
+    // the area inside the outline.
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     const byDesignId = new Map(designs.map(d => [d.id, d]));
     const images = new Map<string, HTMLImageElement>();
@@ -635,7 +621,7 @@ ${images}
             {!result ? (
               <p className="text-sm text-gray-400">Add a design and set a quantity to see the layout.</p>
             ) : (
-              <div className="overflow-auto rounded-lg border border-gray-100 bg-gray-50 p-2">
+              <div className="nesting-preview overflow-auto rounded-lg border border-gray-100 p-2">
                 {/* Fills the panel rather than being capped at a fixed width,
                     and the sheet itself is outlined so the printable area is
                     obvious against the checkerboard. */}
@@ -645,7 +631,7 @@ ${images}
                   style={{
                     // border-box sizing keeps the outline from enlarging the canvas
                     boxSizing: 'border-box',
-                    border: '2px solid var(--tbs-sheet-line, #eab308)',
+                    border: '1px solid var(--tbs-sheet-line, #eab308)',
                   }}
                 />
               </div>
