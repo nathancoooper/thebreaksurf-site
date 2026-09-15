@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { packShelves, type PackResult } from '@/lib/binPacking';
+import { packShelves, footprint, type PackResult } from '@/lib/binPacking';
 import { useTheme } from '@/components/ThemeProvider';
 import { DTF_ROLL_WIDTH_CM, tierForMeters } from '@/lib/dtfPricing';
 
@@ -21,6 +21,7 @@ interface NestingSheet {
   name: string;
   sheetWidthCm: number;
   paddingMm?: number;
+  allowRotation?: boolean;
   items: NestingSheetItem[];
   locked: boolean;
   createdAt: string;
@@ -95,6 +96,8 @@ export default function NestingPage() {
   const [sheetWidthCm, setSheetWidthCm] = useState(String(DTF_ROLL_WIDTH_CM));
   // Cut margin between prints, in mm, so the operator can cut the pieces apart.
   const [paddingMm, setPaddingMm] = useState(DEFAULT_PADDING_MM);
+  // Turn pieces 90° when that packs them into gaps the sheet would otherwise waste.
+  const [allowRotation, setAllowRotation] = useState(true);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [quantities, setQuantities] = useState<Record<string, string>>({});
   const [result, setResult] = useState<PackResult | null>(null);
@@ -130,6 +133,7 @@ export default function NestingPage() {
     setQuantities({});
     setSheetWidthCm(String(DTF_ROLL_WIDTH_CM));
     setPaddingMm(DEFAULT_PADDING_MM);
+    setAllowRotation(true);
     setSaveError(null);
     setView('builder');
   }
@@ -140,6 +144,7 @@ export default function NestingPage() {
     setSheetLocked(sheet.locked);
     setSheetWidthCm(String(sheet.sheetWidthCm));
     setPaddingMm(sheet.paddingMm !== undefined ? String(sheet.paddingMm) : DEFAULT_PADDING_MM);
+    setAllowRotation(sheet.allowRotation !== false);
     setSelectedIds(sheet.items.map(i => i.designId));
     setQuantities(Object.fromEntries(sheet.items.map(i => [i.designId, String(i.qty)])));
     setSaveError(null);
@@ -170,7 +175,7 @@ export default function NestingPage() {
     setSaving(true);
     setSaveError(null);
     try {
-      const body = JSON.stringify({ sheetWidthCm: parseFloat(sheetWidthCm), paddingMm: parseFloat(paddingMm) || 0, items });
+      const body = JSON.stringify({ sheetWidthCm: parseFloat(sheetWidthCm), paddingMm: parseFloat(paddingMm) || 0, allowRotation, items });
       const r = editingSheetId
         ? await fetch(`/api/admin/nesting-sheets/${encodeURIComponent(editingSheetId)}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body })
         : await fetch('/api/admin/nesting-sheets', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body });
@@ -228,8 +233,8 @@ export default function NestingPage() {
     });
 
     if (items.length === 0) { setResult(null); return; }
-    setResult(packShelves(items, width, (parseFloat(paddingMm) || 0) / 10));
-  }, [selectedIds, quantities, sheetWidthCm, paddingMm, designs]);
+    setResult(packShelves(items, width, (parseFloat(paddingMm) || 0) / 10, allowRotation));
+  }, [selectedIds, quantities, sheetWidthCm, paddingMm, allowRotation, designs]);
 
   useEffect(() => {
     if (!result || !canvasRef.current) return;
@@ -275,12 +280,26 @@ export default function NestingPage() {
         const y = piece.y * PX_PER_CM;
         const w = piece.widthCm * PX_PER_CM;
         const h = piece.heightCm * PX_PER_CM;
-        ctx.drawImage(img, x, y, w, h);
+        const fp = footprint(piece);
+        const fw = fp.widthCm * PX_PER_CM;
+        const fh = fp.heightCm * PX_PER_CM;
+
+        if (piece.rotated) {
+          // Turn the artwork 90° clockwise into its footprint.
+          ctx.save();
+          ctx.translate(x + fw, y);
+          ctx.rotate(Math.PI / 2);
+          ctx.drawImage(img, 0, 0, w, h);
+          ctx.restore();
+        } else {
+          ctx.drawImage(img, x, y, w, h);
+        }
+
         // A faint outline so each placement is legible even when the artwork
         // is white (or a dark design on a dark area).
         ctx.strokeStyle = 'rgba(0,0,0,0.15)';
         ctx.lineWidth = 1;
-        ctx.strokeRect(x + 0.5, y + 0.5, Math.max(w - 1, 1), Math.max(h - 1, 1));
+        ctx.strokeRect(x + 0.5, y + 0.5, Math.max(fw - 1, 1), Math.max(fh - 1, 1));
       }
     }
   }, [result, designs, resolvedTheme]);
@@ -316,6 +335,11 @@ export default function NestingPage() {
         // but design tools like Affinity/Illustrator still only recognise
         // the older xlink:href and silently render a zero-size image
         // without it.
+        if (piece.rotated) {
+          // Draw upright at the origin, then turn 90° clockwise about the
+          // footprint's top-right corner so it lands exactly in the box.
+          return `<image href="${href}" xlink:href="${href}" x="0" y="0" width="${piece.widthCm}" height="${piece.heightCm}" transform="translate(${piece.x + piece.heightCm} ${piece.y}) rotate(90)" preserveAspectRatio="none" />`;
+        }
         return `<image href="${href}" xlink:href="${href}" x="${piece.x}" y="${piece.y}" width="${piece.widthCm}" height="${piece.heightCm}" preserveAspectRatio="none" />`;
       }).join('\n');
 
@@ -493,6 +517,14 @@ ${images}
               <input type="number" min="0" step="0.5" value={paddingMm} onChange={e => setPaddingMm(e.target.value)} disabled={sheetLocked}
                 className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 focus:border-gray-400 focus:outline-none disabled:bg-gray-50 disabled:text-gray-400" />
               <span className="mt-1 block text-xs text-gray-400">Gap left between prints, and around the sheet edge, so the pieces can be cut apart.</span>
+            </label>
+            <label className="mt-3 flex items-start gap-2">
+              <input type="checkbox" checked={allowRotation} onChange={e => setAllowRotation(e.target.checked)} disabled={sheetLocked}
+                className="mt-0.5 h-4 w-4 rounded border-gray-300 text-gray-900 focus:ring-0 disabled:opacity-40" />
+              <span className="text-xs text-gray-500">
+                Rotate designs 90° to fill gaps
+                <span className="mt-0.5 block text-gray-400">Only turns a design when it packs tighter; it prints sideways, which is fine when the piece is cut out anyway.</span>
+              </span>
             </label>
             <div className="mt-3 flex items-center gap-2">
               <button onClick={saveSheet} disabled={saving || sheetLocked}

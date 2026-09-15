@@ -8,6 +8,7 @@ export interface NestingSheet {
   name: string;
   sheetWidthCm: number;
   paddingMm?: number;
+  allowRotation?: boolean;
   items: NestingSheetItem[];
   locked: boolean;
   createdAt: string;
@@ -34,6 +35,7 @@ export async function POST(req: NextRequest) {
     name: now.slice(0, 10),
     sheetWidthCm: Number(body.sheetWidthCm),
     paddingMm: Number.isFinite(Number(body.paddingMm)) ? Number(body.paddingMm) : 3,
+    allowRotation: body.allowRotation !== false,
     items: (body.items as NestingSheetItem[]).map(i => ({ designId: i.designId, qty: Number(i.qty) })),
     locked: false,
     createdAt: now,
