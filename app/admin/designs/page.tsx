@@ -30,21 +30,51 @@ function AddDesignModal({ onClose, onCreated }: { onClose: () => void; onCreated
   const [error, setError] = useState<string | null>(null);
   // EPS/AI/PDF can't be drawn by the browser, so it is rasterised server-side.
   const [isVector, setIsVector] = useState(false);
+  const [measuring, setMeasuring] = useState(false);
 
-  function pickFile(f: File) {
+  async function pickFile(f: File) {
     setFile(f);
+    setAspectRatio(null);
+    setError(null);
     const vector = /\.(eps|ai|ps|pdf)$/i.test(f.name);
     setIsVector(vector);
-    setAspectRatio(null);
+
     if (vector) {
-      // No object-URL preview is possible; the PNG appears once uploaded.
+      // The browser cannot decode EPS/AI/PDF, so ask the server for a low-res
+      // raster of it: that gives both the preview and the proportions needed
+      // to fill in the other print dimension.
       setPreview(null);
+      setMeasuring(true);
+      try {
+        const form = new FormData();
+        form.append('file', f);
+        const res = await fetch('/api/admin/artwork-preview', { method: 'POST', credentials: 'include', body: form });
+        const data = await res.json().catch(() => null);
+        if (!res.ok) { setError(data?.error ?? "Couldn't read that file."); return; }
+        if (data?.preview) setPreview(data.preview);
+        if (data?.width > 0 && data?.height > 0) setAspectRatio(data.width / data.height);
+      } finally {
+        setMeasuring(false);
+      }
       return;
     }
+
     const url = URL.createObjectURL(f);
     setPreview(url);
+
+    if (/\.svg$/i.test(f.name)) {
+      // An SVG with width="100%" reports no natural size, so fall back to its
+      // viewBox for the proportions.
+      const text = await f.text().catch(() => '');
+      const box = text.match(/viewBox\s*=\s*["']\s*[-\d.]+[\s,]+[-\d.]+[\s,]+([\d.]+)[\s,]+([\d.]+)/i);
+      if (box && Number(box[1]) > 0 && Number(box[2]) > 0) { setAspectRatio(Number(box[1]) / Number(box[2])); return; }
+    }
+
     const img = new Image();
-    img.onload = () => setAspectRatio(img.naturalWidth / img.naturalHeight);
+    img.onload = () => {
+      const ratio = img.naturalWidth / img.naturalHeight;
+      if (Number.isFinite(ratio) && ratio > 0) setAspectRatio(ratio);
+    };
     img.src = url;
   }
 
@@ -152,12 +182,13 @@ function AddDesignModal({ onClose, onCreated }: { onClose: () => void; onCreated
                   className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 focus:border-gray-400 focus:outline-none" />
               </label>
             </div>
-            {isVector && (
+            {measuring && <p className="text-xs text-gray-400">Reading artwork…</p>}
+            {isVector && !measuring && (
               <p className="rounded-lg bg-blue-50 px-3 py-2 text-xs text-blue-700">
                 EPS / AI / PDF artwork is converted to a 300&nbsp;DPI transparent PNG on upload so it renders in designs and nesting sheets. The original file is kept.
               </p>
             )}
-            <p className="text-xs text-gray-400">Enter the actual physical size this design prints at, not the image file's pixel dimensions — this is what the nesting tool uses to fit designs onto a sheet.{isVector ? '' : ' Choose an image first and the other dimension will fill in automatically from its proportions.'}</p>
+            <p className="text-xs text-gray-400">Enter the actual physical size this design prints at, not the image file's pixel dimensions — this is what the nesting tool uses to fit designs onto a sheet.{aspectRatio ? ' Enter either dimension and the other will fill in from the artwork\u2019s proportions.' : ''}</p>
             {error && <p className="text-xs text-red-600">{error}</p>}
           </div>
         </div>

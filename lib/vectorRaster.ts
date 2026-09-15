@@ -21,7 +21,7 @@ export function isVectorFile(filename: string): boolean {
 }
 
 /** PNG stores width/height as big-endian uint32 at bytes 16-23. */
-function pngSize(buf: Buffer): { width: number; height: number } | null {
+export function pngSize(buf: Buffer): { width: number; height: number } | null {
   if (buf.length < 24 || buf.readUInt32BE(0) !== 0x89504e47) return null;
   return { width: buf.readUInt32BE(16), height: buf.readUInt32BE(20) };
 }
@@ -76,4 +76,17 @@ export async function rasteriseVector(
 
   const second = await ghostscript(source, dpi);
   return second ?? first;
+}
+
+/**
+ * Low-resolution raster used to preview vector artwork and to learn its aspect
+ * ratio while the dialog is still open — the browser cannot decode EPS/AI/PDF
+ * itself, so without this the print dimensions can't auto-fill.
+ */
+export async function rasteriseVectorPreview(source: Buffer, dpi = 72): Promise<{ png: Buffer; width: number; height: number } | null> {
+  const png = await ghostscript(source, dpi);
+  if (!png) return null;
+  const size = pngSize(png);
+  if (!size || !size.width || !size.height) return null;
+  return { png, width: size.width, height: size.height };
 }
