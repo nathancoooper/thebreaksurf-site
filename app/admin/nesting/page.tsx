@@ -448,7 +448,25 @@ ${images}
   // no design to sit against. Both are therefore spread across the designs in
   // proportion to the area each one uses, so the per-design figures add up to
   // exactly what the order costs — which is what makes a quote trustworthy.
-  const allocatedFor = (areaCm2: number) => (usedArea > 0 ? orderTotal * (areaCm2 / usedArea) : 0);
+  // Shares are allocated in whole pence, largest remainder first, so the
+  // per-design figures add up to the order total exactly. Rounding them
+  // independently drifts by a penny or two, which is no good on a quote.
+  const allocations = new Map<string, number>();
+  if (usedArea > 0 && orderTotal > 0) {
+    const shares = designRows.map(r => {
+      const raw = orderTotal * (r.areaCm2 / usedArea) * 100;
+      const floor = Math.floor(raw + 1e-9);
+      return { id: r.id, floor, fraction: raw - floor };
+    });
+    let remainder = Math.round(orderTotal * 100) - shares.reduce((sum, s) => sum + s.floor, 0);
+    for (const share of shares) allocations.set(share.id, share.floor);
+    for (const share of [...shares].sort((a, b) => b.fraction - a.fraction)) {
+      if (remainder <= 0) break;
+      allocations.set(share.id, (allocations.get(share.id) ?? 0) + 1);
+      remainder -= 1;
+    }
+  }
+  const allocatedFor = (id: string) => (allocations.get(id) ?? 0) / 100;
 
   if (view === 'list') {
     return (
@@ -663,9 +681,9 @@ ${images}
                         {hasPrice && <span className="text-right text-xs text-gray-500">{fmtMoney(r.areaCm2 * pricePerCm2)}</span>}
                         {hasPrice && (
                           <span className="text-right text-xs font-medium text-gray-900">
-                            {fmtMoney(allocatedFor(r.areaCm2))}
+                            {fmtMoney(allocatedFor(r.id))}
                             {r.qty > 0 && (
-                              <span className="block text-[10px] font-normal text-gray-400">{fmtMoney(allocatedFor(r.areaCm2) / r.qty)} each</span>
+                              <span className="block text-[10px] font-normal text-gray-400">{fmtMoney(allocatedFor(r.id) / r.qty)} each</span>
                             )}
                           </span>
                         )}
