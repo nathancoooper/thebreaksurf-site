@@ -74,7 +74,10 @@ function pruneContained(rects: Rect[]): Rect[] {
 // `gapCm` is the cuttable margin: each piece reserves its own size plus one
 // gap, so neighbouring prints never touch, and the same gap is used as the
 // sheet's outer margin so nothing sits flush against the film edge.
-function packOnce(items: PackItem[], sheetWidthCm: number, gapCm: number, allowRotation: boolean): PackResult {
+type RotationMode = 'none' | 'small' | 'envelope';
+
+function packOnce(items: PackItem[], sheetWidthCm: number, gapCm: number, mode: RotationMode): PackResult {
+  const allowRotation = mode !== 'none';
   const pad = Math.max(0, gapCm);
   const usableWidth = sheetWidthCm - pad * 2;
   if (usableWidth <= 0) return { placed: [], sheetWidthCm, sheetHeightCm: 0 };
@@ -88,33 +91,44 @@ function packOnce(items: PackItem[], sheetWidthCm: number, gapCm: number, allowR
   const placed: PlacedItem[] = [];
 
   for (const item of sorted) {
-    // Try both orientations when allowed: a wide piece can slot into a tall
-    // gap that would otherwise be wasted. Ties go to the unrotated layout, so
-    // a design is only turned when it genuinely packs tighter.
-    //
-    // Turning a piece converts its width into sheet height, so a large design
-    // rotated into a narrow gap would consume far more length than it saves.
-    // Rotation is therefore limited to pieces that are small next to the sheet
-    // (which is what fills leftover strips) and to any piece that cannot fit
-    // the sheet upright at all (where rotating is the only option).
-    const orientations = [{ w: item.widthCm, h: item.heightCm, rotated: false }];
-    const fitsUpright = item.widthCm + pad <= usableWidth;
-    const smallNextToSheet = Math.max(item.widthCm, item.heightCm) <= sheetWidthCm * 0.25;
-    if (allowRotation && (!fitsUpright || smallNextToSheet) && Math.abs(item.widthCm - item.heightCm) > 1e-9) {
-      orientations.push({ w: item.heightCm, h: item.widthCm, rotated: true });
-    }
+    // Turning a piece converts its width into sheet *length*, which is what
+    // gets bought. Rotating freely makes sheets longer: a 25cm-wide print
+    // turned into a side strip consumes 25cm of length, where upright it
+    // costs only its 4.2cm height. So a rotated placement is only considered
+    // when it lands inside the length the sheet has already committed to —
+    // rotation fills space that has effectively been paid for, and can never
+    // stretch the sheet. A piece that cannot fit upright anywhere is still
+    // turned, since that's the only way to place it at all.
+    const envelopeCm = placed.reduce((max, p) => Math.max(max, p.y + footprint(p).heightCm), 0);
+    const fitsUprightSomewhere = freeRects.some(r =>
+      item.widthCm + pad <= r.width && item.heightCm + pad <= r.height);
+    const canTurn = allowRotation && Math.abs(item.widthCm - item.heightCm) > 1e-9;
 
     let best: { rect: Rect; rotated: boolean; leftover: number } | null = null;
     for (const r of freeRects) {
-      for (const o of orientations) {
-        const cellWidth = o.w + pad;
-        const cellHeight = o.h + pad;
+      for (const rotated of [false, true]) {
+        if (rotated && !canTurn) continue;
+        const w = rotated ? item.heightCm : item.widthCm;
+        const h = rotated ? item.widthCm : item.heightCm;
+        const cellWidth = w + pad;
+        const cellHeight = h + pad;
         if (cellWidth > r.width || cellHeight > r.height) continue;
+        if (rotated) {
+          // Two heuristics, each of which wins on different sheets; packShelves
+          // runs both and keeps the shorter result.
+          if (mode === 'small' && fitsUprightSomewhere) {
+            // Only pieces that are small next to the sheet are worth turning.
+            if (Math.max(item.widthCm, item.heightCm) > sheetWidthCm * 0.25) continue;
+          } else if (mode === 'envelope' && fitsUprightSomewhere) {
+            // Only fill length the sheet already needs.
+            if (r.y + cellHeight > envelopeCm + 1e-9) continue;
+          }
+        }
         const leftover = r.width * r.height - cellWidth * cellHeight;
         if (!best
           || leftover < best.leftover - 1e-9
-          || (Math.abs(leftover - best.leftover) < 1e-9 && best.rotated && !o.rotated)) {
-          best = { rect: r, rotated: o.rotated, leftover };
+          || (Math.abs(leftover - best.leftover) < 1e-9 && best.rotated && !rotated)) {
+          best = { rect: r, rotated, leftover };
         }
       }
     }
@@ -146,13 +160,19 @@ function packOnce(items: PackItem[], sheetWidthCm: number, gapCm: number, allowR
  * ever allowed to help.
  */
 export function packShelves(items: PackItem[], sheetWidthCm: number, gapCm = 0, allowRotation = false): PackResult {
-  const plain = packOnce(items, sheetWidthCm, gapCm, false);
-  if (!allowRotation) return plain;
-
-  const rotated = packOnce(items, sheetWidthCm, gapCm, true);
-  if (rotated.placed.length !== plain.placed.length) {
-    // Prefer the layout that placed more pieces.
-    return rotated.placed.length > plain.placed.length ? rotated : plain;
+  const candidates: PackResult[] = [packOnce(items, sheetWidthCm, gapCm, 'none')];
+  if (allowRotation) {
+    candidates.push(packOnce(items, sheetWidthCm, gapCm, 'small'));
+    candidates.push(packOnce(items, sheetWidthCm, gapCm, 'envelope'));
   }
-  return rotated.sheetHeightCm < plain.sheetHeightCm - 1e-9 ? rotated : plain;
+
+  // Whichever layout places the most pieces wins; ties go to the shortest
+  // sheet, since film is bought by length. Rotation can therefore never make
+  // a sheet worse than leaving it off.
+  return candidates.reduce((best, candidate) => {
+    if (candidate.placed.length !== best.placed.length) {
+      return candidate.placed.length > best.placed.length ? candidate : best;
+    }
+    return candidate.sheetHeightCm < best.sheetHeightCm - 1e-9 ? candidate : best;
+  });
 }
