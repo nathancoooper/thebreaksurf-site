@@ -2,6 +2,19 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 
+type Unit = 'mm' | 'cm' | 'm';
+const UNIT_IN_CM: Record<Unit, number> = { mm: 0.1, cm: 1, m: 100 };
+const UNIT_STEP: Record<Unit, number> = { mm: 1, cm: 0.1, m: 0.001 };
+
+// Sizes are stored in cm; show them in whichever unit reads best.
+function fmtSize(widthCm: number, heightCm: number): string {
+  const trim = (n: number) => String(Number(n.toFixed(2)));
+  const longest = Math.max(widthCm, heightCm);
+  if (longest >= 100) return `${trim(widthCm / 100)} x ${trim(heightCm / 100)} m`;
+  if (longest < 1) return `${trim(widthCm * 10)} x ${trim(heightCm * 10)} mm`;
+  return `${trim(widthCm)} x ${trim(heightCm)} cm`;
+}
+
 interface Design {
   id: string;
   garmentName: string;
@@ -20,8 +33,9 @@ function AddDesignModal({ onClose, onCreated }: { onClose: () => void; onCreated
   const [garmentName, setGarmentName] = useState('');
   const [printType, setPrintType] = useState('');
   const [color, setColor] = useState('');
-  const [widthM, setWidthM] = useState('');
-  const [heightM, setHeightM] = useState('');
+  const [width, setWidth] = useState('');
+  const [height, setHeight] = useState('');
+  const [unit, setUnit] = useState<'mm' | 'cm' | 'm'>('cm');
   // Image's natural (pixel) aspect ratio — once known, typing either
   // dimension fills in the other so the two always stay proportional to
   // the actual artwork instead of needing to be worked out by hand.
@@ -79,17 +93,30 @@ function AddDesignModal({ onClose, onCreated }: { onClose: () => void; onCreated
   }
 
   function onWidthChange(value: string) {
-    setWidthM(value);
+    setWidth(value);
     if (!aspectRatio) return;
     const w = parseFloat(value);
-    if (w > 0) setHeightM((w / aspectRatio).toFixed(3));
+    if (w > 0) setHeight((w / aspectRatio).toFixed(3));
   }
 
   function onHeightChange(value: string) {
-    setHeightM(value);
+    setHeight(value);
     if (!aspectRatio) return;
     const h = parseFloat(value);
-    if (h > 0) setWidthM((h * aspectRatio).toFixed(3));
+    if (h > 0) setWidth((h * aspectRatio).toFixed(3));
+  }
+
+  // Switching units rewrites what's typed so the physical size is unchanged.
+  function changeUnit(next: Unit) {
+    const factor = UNIT_IN_CM[unit] / UNIT_IN_CM[next];
+    const convert = (v: string) => {
+      const n = parseFloat(v);
+      if (!Number.isFinite(n)) return v;
+      return String(Number((n * factor).toPrecision(6)));
+    };
+    setWidth(convert);
+    setHeight(convert);
+    setUnit(next);
   }
 
   async function submit() {
@@ -97,8 +124,8 @@ function AddDesignModal({ onClose, onCreated }: { onClose: () => void; onCreated
     if (!garmentName.trim()) { setError('Enter the garment/product name.'); return; }
     if (!printType.trim()) { setError('Enter the print type.'); return; }
     if (!color.trim()) { setError('Enter the colour.'); return; }
-    const w = parseFloat(widthM) * 100;
-    const h = parseFloat(heightM) * 100;
+    const w = parseFloat(width) * UNIT_IN_CM[unit];
+    const h = parseFloat(height) * UNIT_IN_CM[unit];
     if (!(w > 0) || !(h > 0)) { setError('Enter the real print width and height.'); return; }
 
     setSaving(true);
@@ -170,16 +197,25 @@ function AddDesignModal({ onClose, onCreated }: { onClose: () => void; onCreated
                   className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 focus:border-gray-400 focus:outline-none" />
               </label>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-[1fr_1fr_88px] gap-3">
               <label className="block">
-                <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-gray-400">Print width (m)</span>
-                <input type="number" min="0" step="0.001" value={widthM} onChange={e => onWidthChange(e.target.value)}
+                <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-gray-400">Print width</span>
+                <input type="number" min="0" step={UNIT_STEP[unit]} value={width} onChange={e => onWidthChange(e.target.value)}
                   className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 focus:border-gray-400 focus:outline-none" />
               </label>
               <label className="block">
-                <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-gray-400">Print height (m)</span>
-                <input type="number" min="0" step="0.001" value={heightM} onChange={e => onHeightChange(e.target.value)}
+                <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-gray-400">Print height</span>
+                <input type="number" min="0" step={UNIT_STEP[unit]} value={height} onChange={e => onHeightChange(e.target.value)}
                   className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 focus:border-gray-400 focus:outline-none" />
+              </label>
+              <label className="block">
+                <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-gray-400">Units</span>
+                <select value={unit} onChange={e => changeUnit(e.target.value as Unit)}
+                  className="w-full rounded-lg border border-gray-200 px-2 py-2 text-sm text-gray-700 focus:border-gray-400 focus:outline-none">
+                  <option value="mm">mm</option>
+                  <option value="cm">cm</option>
+                  <option value="m">m</option>
+                </select>
               </label>
             </div>
             {measuring && <p className="text-xs text-gray-400">Reading artwork…</p>}
@@ -285,6 +321,7 @@ export default function DesignsPage() {
                   <div className="p-3">
                     <p className="truncate text-sm font-medium text-gray-900">{g.garmentName}</p>
                     <p className="truncate text-xs text-gray-400">{g.printType} · {d.color}</p>
+                    <p className="mt-0.5 text-xs text-gray-500">{fmtSize(d.widthCm, d.heightCm)}</p>
                   </div>
                   <button
                     onClick={() => deleteDesign(d.id)}

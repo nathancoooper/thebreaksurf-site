@@ -41,6 +41,13 @@ function designLabel(d: Design) {
 const PX_PER_CM = 38;
 const DEFAULT_PADDING_MM = '3';
 
+// Identifies the exact sheet state, so the header can tell whether what's on
+// screen has been saved yet.
+function sheetSignature(widthCm: number, paddingMm: number, allowRotation: boolean, items: NestingSheetItem[]): string {
+  const sorted = [...items].sort((a, b) => a.designId.localeCompare(b.designId));
+  return JSON.stringify({ widthCm, paddingMm, allowRotation, items: sorted });
+}
+
 function fmtArea(cm2: number) {
   return `${cm2.toFixed(0)} cm²`;
 }
@@ -115,6 +122,7 @@ export default function NestingPage() {
   const [sheetLocked, setSheetLocked] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [savedSignature, setSavedSignature] = useState<string | null>(null);
 
   function loadSheets() {
     setSheetsLoading(true);
@@ -135,6 +143,7 @@ export default function NestingPage() {
     setPaddingMm(DEFAULT_PADDING_MM);
     setAllowRotation(true);
     setSaveError(null);
+    setSavedSignature(sheetSignature(DTF_ROLL_WIDTH_CM, Number(DEFAULT_PADDING_MM), true, []));
     setView('builder');
   }
 
@@ -145,6 +154,12 @@ export default function NestingPage() {
     setSheetWidthCm(String(sheet.sheetWidthCm));
     setPaddingMm(sheet.paddingMm !== undefined ? String(sheet.paddingMm) : DEFAULT_PADDING_MM);
     setAllowRotation(sheet.allowRotation !== false);
+    setSavedSignature(sheetSignature(
+      sheet.sheetWidthCm,
+      sheet.paddingMm !== undefined ? Number(sheet.paddingMm) : Number(DEFAULT_PADDING_MM),
+      sheet.allowRotation !== false,
+      sheet.items,
+    ));
     setSelectedIds(sheet.items.map(i => i.designId));
     setQuantities(Object.fromEntries(sheet.items.map(i => [i.designId, String(i.qty)])));
     setSaveError(null);
@@ -176,6 +191,7 @@ export default function NestingPage() {
     setSaveError(null);
     try {
       const body = JSON.stringify({ sheetWidthCm: parseFloat(sheetWidthCm), paddingMm: parseFloat(paddingMm) || 0, allowRotation, items });
+      const currentSignature = sheetSignature(parseFloat(sheetWidthCm), parseFloat(paddingMm) || 0, allowRotation, items);
       const r = editingSheetId
         ? await fetch(`/api/admin/nesting-sheets/${encodeURIComponent(editingSheetId)}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body })
         : await fetch('/api/admin/nesting-sheets', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body });
@@ -188,6 +204,7 @@ export default function NestingPage() {
       if (!r.ok) { setSaveError(data.error ?? `Failed to save (${r.status}).`); return; }
       setEditingSheetId(data.id ?? null);
       setSheetDisplayName(data.name ?? null);
+      setSavedSignature(currentSignature);
       loadSheets();
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : 'Failed to save — check your connection and try again.');
@@ -375,6 +392,18 @@ ${images}
 
   const usedArea = designRows.reduce((sum, r) => sum + r.areaCm2, 0);
 
+  const currentSignature = sheetSignature(
+    parseFloat(sheetWidthCm) || 0,
+    parseFloat(paddingMm) || 0,
+    allowRotation,
+    designRows.filter(r => r.qty > 0).map(r => ({ designId: r.id, qty: r.qty })),
+  );
+  const hasUnsavedChanges = savedSignature !== null && currentSignature !== savedSignature;
+  // Only offer the DTF.UK hand-off once what's on screen is actually saved —
+  // otherwise the button saves first, so nobody orders a sheet that doesn't
+  // match the layout they were looking at.
+  const showOrderAction = !!editingSheetId && !hasUnsavedChanges && !sheetLocked;
+
   // Rolls are bought in whole metres, so the length actually paid for is
   // rounded up from whatever the packed layout needs — that rounding
   // slack is real, purchased-but-unused length, on top of any gaps left
@@ -477,15 +506,25 @@ ${images}
           >
             ← Back to sheets
           </button>
-          <a
-            href="https://dtf.uk/products/build-a-dtf-gang-sheet-online"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
-          >
-            Order from DTF.UK
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M7 17 17 7M7 7h10v10"/></svg>
-          </a>
+          {showOrderAction ? (
+            <a
+              href="https://dtf.uk/products/build-a-dtf-gang-sheet-online"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 rounded-lg bg-gray-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-700 transition-colors"
+            >
+              Order from DTF.UK
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M7 17 17 7M7 7h10v10"/></svg>
+            </a>
+          ) : (
+            <button
+              onClick={saveSheet}
+              disabled={saving || sheetLocked}
+              className="flex items-center gap-1.5 rounded-lg bg-gray-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-700 disabled:opacity-40 transition-colors"
+            >
+              {saving ? 'Saving…' : 'Save'}
+            </button>
+          )}
         </div>
       </div>
 
