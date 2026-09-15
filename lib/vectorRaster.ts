@@ -18,6 +18,8 @@ const MAX_PX = 12000;
 // factor: that way measurement error can only ever add margin, never clip
 // artwork.
 const MEASURE_EDGE = 1024;
+// Image sent to the dialog; the reported width/height stay the true ones.
+const PREVIEW_EDGE = 320;
 
 export function isVectorFile(filename: string): boolean {
   const ext = filename.includes('.') ? '.' + filename.split('.').pop()!.toLowerCase() : '';
@@ -62,7 +64,7 @@ interface Box { x: number; y: number; width: number; height: number }
  * channel, so blank margins can be cropped away. Returns null when the file
  * can't be measured (in which case the untrimmed raster is used).
  */
-async function inkBox(png: Buffer, width: number, height: number): Promise<Box | null> {
+async function inkBox(png: Buffer, width: number, height: number, pad = true): Promise<Box | null> {
   const dir = await mkdtemp(path.join(tmpdir(), 'measure-'));
   const inPath = path.join(dir, 'in.png');
   try {
@@ -94,16 +96,17 @@ async function inkBox(png: Buffer, width: number, height: number): Promise<Box |
     const toFullX = (v: number) => Math.round((v / sw) * width);
     const toFullY = (v: number) => Math.round((v / sh) * height);
     // Pad by at least one measure-pixel so rounding can't shave the artwork.
-    const pad = Math.ceil(width / sw) + 2;
+    // Previews skip it: there the ratio matters more than a couple of pixels.
+    const margin = pad ? Math.ceil(width / sw) + 2 : 0;
 
     const box: Box = {
-      x: Math.max(0, toFullX(sx0) - pad),
-      y: Math.max(0, toFullY(sy0) - pad),
+      x: Math.max(0, toFullX(sx0) - margin),
+      y: Math.max(0, toFullY(sy0) - margin),
       width: 0,
       height: 0,
     };
-    box.width = Math.min(width - box.x, toFullX(sx1) - box.x + 1 + pad);
-    box.height = Math.min(height - box.y, toFullY(sy1) - box.y + 1 + pad);
+    box.width = Math.min(width - box.x, toFullX(sx1) - box.x + 1 + margin);
+    box.height = Math.min(height - box.y, toFullY(sy1) - box.y + 1 + margin);
     if (box.width < 1 || box.height < 1) return null;
     return box;
   } catch (error) {
@@ -136,10 +139,10 @@ async function cropPng(png: Buffer, box: Box): Promise<Buffer | null> {
 }
 
 /** Crops the blank artboard margins, falling back to the original raster. */
-export async function trimToArtwork(png: Buffer): Promise<{ png: Buffer; width: number; height: number } | null> {
+export async function trimToArtwork(png: Buffer, opts: { pad?: boolean } = {}): Promise<{ png: Buffer; width: number; height: number } | null> {
   const size = pngSize(png);
   if (!size) return null;
-  const box = await inkBox(png, size.width, size.height);
+  const box = await inkBox(png, size.width, size.height, opts.pad !== false);
   if (!box || (box.width >= size.width && box.height >= size.height)) {
     return { png, width: size.width, height: size.height };
   }
@@ -182,6 +185,27 @@ export async function rasteriseVector(
   return trimmed?.png ?? raster;
 }
 
+async function scalePng(png: Buffer, maxEdge: number): Promise<Buffer | null> {
+  const dir = await mkdtemp(path.join(tmpdir(), 'scale-'));
+  const inPath = path.join(dir, 'in.png');
+  const outPath = path.join(dir, 'out.png');
+  try {
+    await writeFile(inPath, png);
+    await run('ffmpeg', [
+      '-v', 'error', '-i', inPath,
+      '-vf', `scale='min(${maxEdge},iw)':-1`,
+      '-frames:v', '1', '-y', outPath,
+    ], { timeout: 120_000, maxBuffer: 8 * 1024 * 1024 });
+    const out = await readFile(outPath);
+    return out.length ? out : null;
+  } catch (error) {
+    console.error('[vectorRaster] scale failed:', error);
+    return null;
+  } finally {
+    await rm(dir, { recursive: true, force: true }).catch(() => {});
+  }
+}
+
 /**
  * Low-resolution raster used to preview vector artwork and to learn the
  * artwork's proportions while the dialog is still open — the browser cannot
@@ -189,8 +213,13 @@ export async function rasteriseVector(
  * dimension auto-fill is possible. Trimmed for the same reason as the full
  * raster: the proportions must match what actually gets printed.
  */
-export async function rasteriseVectorPreview(source: Buffer, dpi = 72): Promise<{ png: Buffer; width: number; height: number } | null> {
+export async function rasteriseVectorPreview(source: Buffer, dpi = 150): Promise<{ png: Buffer; width: number; height: number } | null> {
   const png = await ghostscript(source, dpi);
   if (!png) return null;
-  return trimToArtwork(png);
+  // Unpadded, so the reported proportions track the artwork rather than the
+  // crop's safety margin - the dialog fills one print dimension from this.
+  const trimmed = await trimToArtwork(png, { pad: false });
+  if (!trimmed) return null;
+  const small = trimmed.width > PREVIEW_EDGE ? await scalePng(trimmed.png, PREVIEW_EDGE) : null;
+  return { png: small ?? trimmed.png, width: trimmed.width, height: trimmed.height };
 }
