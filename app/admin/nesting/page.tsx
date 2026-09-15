@@ -7,6 +7,7 @@ import { DTF_ROLL_WIDTH_CM, tierForMeters } from '@/lib/dtfPricing';
 
 interface Design {
   id: string;
+  thumbPath?: string;
   garmentName: string;
   printType: string;
   color: string;
@@ -22,6 +23,7 @@ interface NestingSheet {
   sheetWidthCm: number;
   paddingMm?: number;
   allowRotation?: boolean;
+  extraCosts?: { label: string; amountPence: number }[];
   items: NestingSheetItem[];
   locked: boolean;
   createdAt: string;
@@ -43,9 +45,16 @@ const DEFAULT_PADDING_MM = '3';
 
 // Identifies the exact sheet state, so the header can tell whether what's on
 // screen has been saved yet.
-function sheetSignature(widthCm: number, paddingMm: number, allowRotation: boolean, items: NestingSheetItem[]): string {
+function sheetSignature(
+  widthCm: number,
+  paddingMm: number,
+  allowRotation: boolean,
+  items: NestingSheetItem[],
+  extraCosts: { label: string; amountPence: number }[] = [],
+): string {
   const sorted = [...items].sort((a, b) => a.designId.localeCompare(b.designId));
-  return JSON.stringify({ widthCm, paddingMm, allowRotation, items: sorted });
+  const extras = [...extraCosts].sort((a, b) => a.label.localeCompare(b.label));
+  return JSON.stringify({ widthCm, paddingMm, allowRotation, items: sorted, extras });
 }
 
 function fmtArea(cm2: number) {
@@ -105,6 +114,9 @@ export default function NestingPage() {
   const [paddingMm, setPaddingMm] = useState(DEFAULT_PADDING_MM);
   // Turn pieces 90° when that packs them into gaps the sheet would otherwise waste.
   const [allowRotation, setAllowRotation] = useState(true);
+  // Charges beyond the film itself (shipping, setup…). Kept on the sheet so
+  // they can be added after the order and still be shared across designs.
+  const [extraCosts, setExtraCosts] = useState<{ label: string; amount: string }[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [quantities, setQuantities] = useState<Record<string, string>>({});
   const [result, setResult] = useState<PackResult | null>(null);
@@ -143,6 +155,7 @@ export default function NestingPage() {
     setPaddingMm(DEFAULT_PADDING_MM);
     setAllowRotation(true);
     setSaveError(null);
+    setExtraCosts([]);
     setSavedSignature(sheetSignature(DTF_ROLL_WIDTH_CM, Number(DEFAULT_PADDING_MM), true, []));
     setView('builder');
   }
@@ -154,11 +167,14 @@ export default function NestingPage() {
     setSheetWidthCm(String(sheet.sheetWidthCm));
     setPaddingMm(sheet.paddingMm !== undefined ? String(sheet.paddingMm) : DEFAULT_PADDING_MM);
     setAllowRotation(sheet.allowRotation !== false);
+    const loadedExtras = (sheet.extraCosts ?? []).map(e => ({ label: e.label, amount: (e.amountPence / 100).toFixed(2) }));
+    setExtraCosts(loadedExtras);
     setSavedSignature(sheetSignature(
       sheet.sheetWidthCm,
       sheet.paddingMm !== undefined ? Number(sheet.paddingMm) : Number(DEFAULT_PADDING_MM),
       sheet.allowRotation !== false,
       sheet.items,
+      sheet.extraCosts ?? [],
     ));
     setSelectedIds(sheet.items.map(i => i.designId));
     setQuantities(Object.fromEntries(sheet.items.map(i => [i.designId, String(i.qty)])));
@@ -190,8 +206,11 @@ export default function NestingPage() {
     setSaving(true);
     setSaveError(null);
     try {
-      const body = JSON.stringify({ sheetWidthCm: parseFloat(sheetWidthCm), paddingMm: parseFloat(paddingMm) || 0, allowRotation, items });
-      const currentSignature = sheetSignature(parseFloat(sheetWidthCm), parseFloat(paddingMm) || 0, allowRotation, items);
+      const extrasPence = extraCosts
+        .filter(e => e.label.trim() || parseFloat(e.amount))
+        .map(e => ({ label: e.label.trim().slice(0, 60) || 'Cost', amountPence: Math.round((parseFloat(e.amount) || 0) * 100) }));
+      const body = JSON.stringify({ sheetWidthCm: parseFloat(sheetWidthCm), paddingMm: parseFloat(paddingMm) || 0, allowRotation, extraCosts: extrasPence, items });
+      const currentSignature = sheetSignature(parseFloat(sheetWidthCm), parseFloat(paddingMm) || 0, allowRotation, items, extrasPence);
       const r = editingSheetId
         ? await fetch(`/api/admin/nesting-sheets/${encodeURIComponent(editingSheetId)}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body })
         : await fetch('/api/admin/nesting-sheets', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body });
@@ -397,6 +416,7 @@ ${images}
     parseFloat(paddingMm) || 0,
     allowRotation,
     designRows.filter(r => r.qty > 0).map(r => ({ designId: r.id, qty: r.qty })),
+    extraCosts.map(e => ({ label: e.label.trim(), amountPence: Math.round((parseFloat(e.amount) || 0) * 100) })),
   );
   const hasUnsavedChanges = savedSignature !== null && currentSignature !== savedSignature;
   // Only offer the DTF.UK hand-off once what's on screen is actually saved —
@@ -418,6 +438,17 @@ ${images}
   const pricePerCm2 = purchasedAreaCm2 > 0 ? totalCost / purchasedAreaCm2 : 0;
   const unusedArea = purchasedAreaCm2 - usedArea;
   const hasPrice = pricePerCm2 > 0;
+
+  // What the film actually costs, plus anything charged on top of it.
+  const extraTotal = extraCosts.reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0);
+  const orderTotal = totalCost + extraTotal;
+
+  // A design's own space is straightforward, but the film is bought in whole
+  // metres and shared with the unused area, and extras (shipping, setup) have
+  // no design to sit against. Both are therefore spread across the designs in
+  // proportion to the area each one uses, so the per-design figures add up to
+  // exactly what the order costs — which is what makes a quote trustworthy.
+  const allocatedFor = (areaCm2: number) => (usedArea > 0 ? orderTotal * (areaCm2 / usedArea) : 0);
 
   if (view === 'list') {
     return (
@@ -565,19 +596,7 @@ ${images}
                 <span className="mt-0.5 block text-gray-400">Only turns a design when it packs tighter; it prints sideways, which is fine when the piece is cut out anyway.</span>
               </span>
             </label>
-            <div className="mt-3 flex items-center gap-2">
-              <button onClick={saveSheet} disabled={saving || sheetLocked}
-                className="rounded-lg bg-gray-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-700 disabled:opacity-40 transition-colors">
-                {saving ? 'Saving…' : editingSheetId ? 'Update sheet' : 'Save sheet'}
-              </button>
-              {editingSheetId && (
-                <button onClick={() => toggleLock(editingSheetId, !sheetLocked)}
-                  className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 transition-colors">
-                  {sheetLocked ? 'Unlock' : 'Lock'}
-                </button>
-              )}
-              {saveError && <p className="text-xs text-red-600">{saveError}</p>}
-            </div>
+            {saveError && <p className="mt-3 text-xs text-red-600">{saveError}</p>}
           </div>
 
           {result && tier && (
@@ -614,17 +633,18 @@ ${images}
               <div className="space-y-3">
                 {designRows.length > 0 && (
                   <div className="overflow-hidden rounded-lg border border-gray-100">
-                    <div className={`grid ${hasPrice ? 'grid-cols-[28px_1fr_50px_70px_70px_20px]' : 'grid-cols-[28px_1fr_50px_70px_20px]'} items-center gap-2 border-b border-gray-100 bg-gray-50 px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-gray-400`}>
+                    <div className={`grid ${hasPrice ? 'grid-cols-[28px_1fr_44px_60px_62px_74px_20px]' : 'grid-cols-[28px_1fr_44px_60px_20px]'} items-center gap-2 border-b border-gray-100 bg-gray-50 px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-gray-400`}>
                       <span />
                       <span>Design</span>
                       <span className="text-right">Qty</span>
                       <span className="text-right">Area</span>
-                      {hasPrice && <span className="text-right">Cost</span>}
+                      {hasPrice && <span className="text-right" title="Cost of the space this design occupies">Cost</span>}
+                      {hasPrice && <span className="text-right" title="Space cost plus its share of the unused film and any additional costs">Total</span>}
                       <span />
                     </div>
                     {designRows.map(r => (
-                      <div key={r.id} className={`grid ${hasPrice ? 'grid-cols-[28px_1fr_50px_70px_70px_20px]' : 'grid-cols-[28px_1fr_50px_70px_20px]'} items-center gap-2 border-b border-gray-50 px-2 py-1.5 last:border-b-0`}>
-                        <img src={r.design.imagePath} alt="" className="h-6 w-6 shrink-0 rounded border border-gray-100 object-contain bg-gray-50" />
+                      <div key={r.id} className={`grid ${hasPrice ? 'grid-cols-[28px_1fr_44px_60px_62px_74px_20px]' : 'grid-cols-[28px_1fr_44px_60px_20px]'} items-center gap-2 border-b border-gray-50 px-2 py-1.5 last:border-b-0`}>
+                        <img src={r.design.thumbPath ?? r.design.imagePath} alt="" className="h-6 w-6 shrink-0 rounded border border-gray-100 object-contain bg-gray-50" />
                         <span className="min-w-0">
                           <p className="truncate text-xs font-medium text-gray-900">{r.design.garmentName}</p>
                           <p className="truncate text-[11px] text-gray-400">{r.design.printType} · {r.design.color}</p>
@@ -640,22 +660,102 @@ ${images}
                           className="w-full min-w-0 rounded border border-gray-200 px-1 py-1 text-right text-xs text-gray-700 focus:border-gray-400 focus:outline-none disabled:bg-gray-50 disabled:text-gray-400"
                         />
                         <span className="text-right text-xs text-gray-500">{fmtArea(r.areaCm2)}</span>
-                        {hasPrice && <span className="text-right text-xs font-medium text-gray-900">{fmtMoney(r.areaCm2 * pricePerCm2)}</span>}
+                        {hasPrice && <span className="text-right text-xs text-gray-500">{fmtMoney(r.areaCm2 * pricePerCm2)}</span>}
+                        {hasPrice && (
+                          <span className="text-right text-xs font-medium text-gray-900">
+                            {fmtMoney(allocatedFor(r.areaCm2))}
+                            {r.qty > 0 && (
+                              <span className="block text-[10px] font-normal text-gray-400">{fmtMoney(allocatedFor(r.areaCm2) / r.qty)} each</span>
+                            )}
+                          </span>
+                        )}
                         <button onClick={() => removeDesign(r.id)} title="Remove" disabled={sheetLocked} className="text-gray-300 hover:text-gray-500 disabled:opacity-0">
                           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                         </button>
                       </div>
                     ))}
                     {result && (
-                      <div className={`grid ${hasPrice ? 'grid-cols-[28px_1fr_50px_70px_70px_20px]' : 'grid-cols-[28px_1fr_50px_70px_20px]'} items-center gap-2 bg-gray-50 px-2 py-1.5`}>
+                      <div className={`grid ${hasPrice ? 'grid-cols-[28px_1fr_44px_60px_62px_74px_20px]' : 'grid-cols-[28px_1fr_44px_60px_20px]'} items-center gap-2 bg-gray-50 px-2 py-1.5`}>
                         <span />
                         <span className="truncate text-xs text-gray-400">Unused space</span>
                         <span className="text-right text-xs text-gray-400">N/A</span>
                         <span className="text-right text-xs text-gray-400">{fmtArea(unusedArea)}</span>
-                        {hasPrice && <span className="text-right text-xs font-medium text-gray-400">{fmtMoney(unusedArea * pricePerCm2)}</span>}
+                        {hasPrice && <span className="text-right text-xs text-gray-400">{fmtMoney(unusedArea * pricePerCm2)}</span>}
+                        <span className="text-right text-[10px] text-gray-400">shared</span>
                         <span />
                       </div>
                     )}
+                  </div>
+                )}
+
+                <div className="rounded-lg border border-gray-100 p-3">
+                  <div className="mb-2 flex items-center justify-between">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">Additional costs</span>
+                    <button
+                      onClick={() => setExtraCosts(list => [...list, { label: '', amount: '' }])}
+                      disabled={sheetLocked}
+                      className="text-xs font-medium text-gray-500 hover:text-gray-900 disabled:opacity-40 transition-colors"
+                    >
+                      + Add cost
+                    </button>
+                  </div>
+                  {extraCosts.length === 0 ? (
+                    <p className="text-xs text-gray-400">Shipping, setup fees and anything else that should be shared across the designs. Saved with the sheet, so it can be added after the order too.</p>
+                  ) : (
+                    <div className="space-y-1.5">
+                      {extraCosts.map((extra, index) => (
+                        <div key={index} className="flex items-center gap-2">
+                          <input
+                            value={extra.label}
+                            onChange={e => setExtraCosts(list => list.map((x, i) => i === index ? { ...x, label: e.target.value } : x))}
+                            placeholder="Shipping"
+                            disabled={sheetLocked}
+                            className="min-w-0 flex-1 rounded border border-gray-200 px-2 py-1 text-xs text-gray-700 focus:border-gray-400 focus:outline-none disabled:bg-gray-50"
+                          />
+                          <span className="text-xs text-gray-400">£</span>
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={extra.amount}
+                            onChange={e => setExtraCosts(list => list.map((x, i) => i === index ? { ...x, amount: e.target.value } : x))}
+                            placeholder="0.00"
+                            disabled={sheetLocked}
+                            className="w-20 rounded border border-gray-200 px-2 py-1 text-right text-xs text-gray-700 focus:border-gray-400 focus:outline-none disabled:bg-gray-50"
+                          />
+                          <button
+                            onClick={() => setExtraCosts(list => list.filter((_, i) => i !== index))}
+                            disabled={sheetLocked}
+                            title="Remove cost"
+                            className="text-gray-300 hover:text-gray-500 disabled:opacity-40"
+                          >
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {hasPrice && (
+                  <div className="space-y-1 border-t border-gray-100 pt-3 text-sm">
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-500">Film ({metersOrdered} m)</span>
+                      <span className="text-gray-900">{fmtMoney(totalCost)}</span>
+                    </div>
+                    {extraTotal > 0 && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-500">Additional costs</span>
+                        <span className="text-gray-900">{fmtMoney(extraTotal)}</span>
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between font-semibold text-gray-900">
+                      <span>Order total</span>
+                      <span>{fmtMoney(orderTotal)}</span>
+                    </div>
+                    <p className="text-[11px] text-gray-400">
+                      The per-design figures above add up to this total: each design carries its own space, plus its share of the unused film and additional costs by area used.
+                    </p>
                   </div>
                 )}
 

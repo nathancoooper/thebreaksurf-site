@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdminFromRequest, unauthorised } from '@/lib/adminAuth';
 import { readData, writeData, deleteData } from '@/lib/dataCache';
-import type { NestingSheet, NestingSheetItem } from '../route';
+import type { NestingSheet, NestingSheetItem, NestingSheetExtra } from '../route';
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   if (!await requireAdminFromRequest(req)) return unauthorised();
@@ -27,6 +27,11 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     sheetWidthCm: body.sheetWidthCm > 0 ? Number(body.sheetWidthCm) : existing.sheetWidthCm,
     paddingMm: body.paddingMm !== undefined ? (Number.isFinite(Number(body.paddingMm)) ? Number(body.paddingMm) : existing.paddingMm) : existing.paddingMm,
     allowRotation: body.allowRotation !== undefined ? body.allowRotation !== false : existing.allowRotation,
+    extraCosts: Array.isArray(body.extraCosts)
+      ? (body.extraCosts as NestingSheetExtra[])
+          .filter(e => e && typeof e.label === 'string')
+          .map(e => ({ label: e.label.slice(0, 60), amountPence: Math.round(Number(e.amountPence) || 0) }))
+      : existing.extraCosts,
     items: Array.isArray(body.items) && body.items.length > 0
       ? (body.items as NestingSheetItem[]).map(i => ({ designId: i.designId, qty: Number(i.qty) }))
       : existing.items,
