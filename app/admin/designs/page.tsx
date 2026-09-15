@@ -370,6 +370,7 @@ export default function DesignsPage() {
                           ) : (
                             <p className="truncate text-xs text-gray-400">{g.printType} · {d.color}</p>
                           )}
+                          <p className="mt-0.5 text-xs text-gray-500">{fmtSize(d.widthCm, d.heightCm)}</p>
                         </div>
                       </div>
                       <button
