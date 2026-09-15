@@ -22,6 +22,7 @@ interface Design {
   color: string;
   imagePath: string;
   sourcePath?: string;
+  thumbPath?: string;
   widthCm: number;
   heightCm: number;
   createdAt: string;
@@ -144,13 +145,13 @@ function AddDesignModal({ onClose, onCreated }: { onClose: () => void; onCreated
       setSaving(false);
       return;
     }
-    const { path: imagePath, sourcePath } = await uploadRes.json();
+    const { path: imagePath, sourcePath, thumbPath } = await uploadRes.json();
 
     const createRes = await fetch('/api/admin/designs', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
-      body: JSON.stringify({ garmentName: garmentName.trim(), printType: printType.trim(), color: color.trim(), imagePath, sourcePath, widthCm: w, heightCm: h }),
+      body: JSON.stringify({ garmentName: garmentName.trim(), printType: printType.trim(), color: color.trim(), imagePath, sourcePath, thumbPath, widthCm: w, heightCm: h }),
     });
     if (!createRes.ok) { setError("Uploaded, but couldn't save the design record."); setSaving(false); return; }
     onCreated(await createRes.json());
@@ -316,7 +317,8 @@ export default function DesignsPage() {
               return (
                 <div key={g.key} className="group/item relative w-44 shrink-0 overflow-hidden rounded-2xl border border-gray-100 bg-white">
                   <div className="flex h-32 items-center justify-center bg-gray-50 p-3">
-                    <img src={d.imagePath} alt="" className="max-h-full max-w-full object-contain" />
+                    {/* Thumbnail when available: the full artwork can be 12 MB */}
+                    <img src={d.thumbPath ?? d.imagePath} alt="" loading="lazy" className="max-h-full max-w-full object-contain" />
                   </div>
                   <div className="p-3">
                     <p className="truncate text-sm font-medium text-gray-900">{g.garmentName}</p>
@@ -349,22 +351,28 @@ export default function DesignsPage() {
                         : 'w-0 shrink-0 overflow-hidden opacity-0 transition-[width,opacity] duration-200 ease-out group-hover/stack:w-44 group-hover/stack:opacity-100'
                     }
                   >
-                    <div className="group/item relative h-44">
+                    {/* No fixed height: the card is taller than h-44, and the
+                        expanding wrapper clips overflow, which cut the bottom
+                        off the fanned-out cards. */}
+                    <div className="group/item relative">
                       {i === 0 && (
                         <>
                           <div className="pointer-events-none absolute inset-0 translate-x-2 translate-y-2 rounded-2xl border border-gray-100 bg-white transition-opacity group-hover/stack:opacity-0" />
                           <div className="pointer-events-none absolute inset-0 translate-x-1 translate-y-1 rounded-2xl border border-gray-100 bg-white transition-opacity group-hover/stack:opacity-0" />
+                          <div className="absolute -right-2 -top-2 z-10 flex h-6 min-w-6 items-center justify-center rounded-full border border-gray-200 bg-white px-1.5 text-[11px] font-semibold text-gray-600 shadow-sm transition-opacity group-hover/stack:opacity-0">
+                            {g.items.length}
+                          </div>
                         </>
                       )}
                       <div className="relative w-44 overflow-hidden rounded-2xl border border-gray-100 bg-white">
                         <div className="flex h-32 items-center justify-center bg-gray-50 p-3">
-                          <img src={d.imagePath} alt="" className="max-h-full max-w-full object-contain" />
+                          <img src={d.thumbPath ?? d.imagePath} alt="" loading="lazy" className="max-h-full max-w-full object-contain" />
                         </div>
                         <div className="p-3">
                           <p className="truncate text-sm font-medium text-gray-900">{g.garmentName}</p>
                           {i === 0 ? (
                             <>
-                              <p className="truncate text-xs text-gray-400 group-hover/stack:hidden">{g.printType} · {g.items.length} colours</p>
+                              <p className="truncate text-xs text-gray-400 group-hover/stack:hidden">{g.printType} · {g.items.length} {g.items.length === 1 ? 'card' : 'cards'}</p>
                               <p className="hidden truncate text-xs text-gray-400 group-hover/stack:block">{g.printType} · {d.color}</p>
                             </>
                           ) : (

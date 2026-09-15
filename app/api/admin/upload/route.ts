@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAdminFromRequest, unauthorised } from '@/lib/adminAuth';
 import { uploadToR2, listR2Files, deleteFromR2 } from '@/lib/r2';
 import { isVectorFile, isTrimmableRaster, rasteriseVector, trimRasterUpload } from '@/lib/vectorRaster';
+import { makeThumbnail } from '@/lib/thumbnails';
 
 // Safari downloads video/quicktime as .qt — normalise to common extensions.
 const MIME_EXT: Record<string, string> = {
@@ -54,6 +55,22 @@ async function buildFilename(fields: Record<string, string>, ext: string, prefix
   const base = parts.join('_');
   const version = await nextVersion(`${subdir}/`, base);
   return { filename: `${base}_${version}${ext}`, subdir, base };
+}
+
+// Cards show artwork at ~176px, so give them a small copy instead of the
+// full-size file (one of these is 12 MB). Returns the public path, or null
+// when no thumbnail could be produced.
+async function storeThumbnail(artworkKey: string, image: Buffer): Promise<string | null> {
+  const thumb = await makeThumbnail(image);
+  if (!thumb) return null;
+  const thumbKey = artworkKey.replace(/\.[a-z0-9]+$/i, '') + '-thumb' + thumb.extension;
+  try {
+    await uploadToR2(thumbKey, thumb.buffer, thumb.contentType);
+    return `/api/r2/${thumbKey}`;
+  } catch (err) {
+    console.error('[upload] thumbnail store error:', err);
+    return null;
+  }
 }
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
@@ -124,7 +141,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
     const pngKey = key.replace(/\.[a-z0-9]+$/i, '.png');
     await uploadToR2(pngKey, png, 'image/png');
-    return NextResponse.json({ path: `/api/r2/${pngKey}`, sourcePath: `/api/r2/${key}` });
+    return NextResponse.json({ path: `/api/r2/${pngKey}`, sourcePath: `/api/r2/${key}`, thumbPath: await storeThumbnail(pngKey, png) });
   }
 
   // Rasters with real transparency get their blank margins trimmed too, so the
@@ -135,9 +152,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       const pngKey = key.replace(/\.[a-z0-9]+$/i, '.png');
       await uploadToR2(pngKey, trimmed.png, 'image/png');
       if (pngKey !== key) await deleteFromR2(key).catch(() => {});
-      return NextResponse.json({ path: `/api/r2/${pngKey}` });
+      return NextResponse.json({ path: `/api/r2/${pngKey}`, thumbPath: await storeThumbnail(pngKey, trimmed.png) });
     }
   }
 
-  return NextResponse.json({ path: `/api/r2/${key}` });
+  return NextResponse.json({ path: `/api/r2/${key}`, thumbPath: await storeThumbnail(key, content) });
 }

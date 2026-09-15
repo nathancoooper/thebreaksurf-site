@@ -9,6 +9,7 @@ export interface Design {
   color: string;
   imagePath: string;
   sourcePath?: string;
+  thumbPath?: string;
   widthCm: number;
   heightCm: number;
   createdAt: string;
@@ -34,6 +35,7 @@ export async function POST(req: NextRequest) {
     color: body.color.trim(),
     imagePath: body.imagePath,
     sourcePath: body.sourcePath ? String(body.sourcePath) : undefined,
+    thumbPath: body.thumbPath ? String(body.thumbPath) : undefined,
     widthCm: Number(body.widthCm),
     heightCm: Number(body.heightCm),
     createdAt: new Date().toISOString(),
