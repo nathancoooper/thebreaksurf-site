@@ -1,0 +1,34 @@
+-- 006: tables the code reads but the MariaDB migration never created.
+-- The designs/nesting feature (and meetings/people/social posts) had no tables
+-- on the VPS, so those routes returned 500 and the admin pages silently
+-- rendered empty lists. Same JSON-blob shape as every other data table.
+
+CREATE TABLE IF NOT EXISTS designs (
+  id VARCHAR(191) PRIMARY KEY,
+  data LONGTEXT NOT NULL,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS nesting_sheets (
+  id VARCHAR(191) PRIMARY KEY,
+  data LONGTEXT NOT NULL,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS meetings (
+  id VARCHAR(191) PRIMARY KEY,
+  data LONGTEXT NOT NULL,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS people (
+  id VARCHAR(191) PRIMARY KEY,
+  data LONGTEXT NOT NULL,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS social_posts (
+  id VARCHAR(191) PRIMARY KEY,
+  data LONGTEXT NOT NULL,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
