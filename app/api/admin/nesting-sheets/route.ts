@@ -7,6 +7,7 @@ export interface NestingSheet {
   id: string;
   name: string;
   sheetWidthCm: number;
+  paddingMm?: number;
   items: NestingSheetItem[];
   locked: boolean;
   createdAt: string;
@@ -32,6 +33,7 @@ export async function POST(req: NextRequest) {
     id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
     name: now.slice(0, 10),
     sheetWidthCm: Number(body.sheetWidthCm),
+    paddingMm: Number.isFinite(Number(body.paddingMm)) ? Number(body.paddingMm) : 3,
     items: (body.items as NestingSheetItem[]).map(i => ({ designId: i.designId, qty: Number(i.qty) })),
     locked: false,
     createdAt: now,

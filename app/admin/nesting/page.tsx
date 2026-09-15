@@ -19,6 +19,7 @@ interface NestingSheet {
   id: string;
   name: string;
   sheetWidthCm: number;
+  paddingMm?: number;
   items: NestingSheetItem[];
   locked: boolean;
   createdAt: string;
@@ -36,6 +37,7 @@ function designLabel(d: Design) {
 // Canvas pixels per cm — high enough for a crisp preview without being
 // wasteful; DTF print files are typically prepared around this range.
 const PX_PER_CM = 38;
+const DEFAULT_PADDING_MM = '3';
 
 function fmtArea(cm2: number) {
   return `${cm2.toFixed(0)} cm²`;
@@ -89,6 +91,8 @@ export default function NestingPage() {
   const [designs, setDesigns] = useState<Design[]>([]);
   const [loading, setLoading] = useState(true);
   const [sheetWidthCm, setSheetWidthCm] = useState(String(DTF_ROLL_WIDTH_CM));
+  // Cut margin between prints, in mm, so the operator can cut the pieces apart.
+  const [paddingMm, setPaddingMm] = useState(DEFAULT_PADDING_MM);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [quantities, setQuantities] = useState<Record<string, string>>({});
   const [result, setResult] = useState<PackResult | null>(null);
@@ -123,6 +127,7 @@ export default function NestingPage() {
     setSelectedIds([]);
     setQuantities({});
     setSheetWidthCm(String(DTF_ROLL_WIDTH_CM));
+    setPaddingMm(DEFAULT_PADDING_MM);
     setSaveError(null);
     setView('builder');
   }
@@ -132,6 +137,7 @@ export default function NestingPage() {
     setSheetDisplayName(sheet.name);
     setSheetLocked(sheet.locked);
     setSheetWidthCm(String(sheet.sheetWidthCm));
+    setPaddingMm(sheet.paddingMm !== undefined ? String(sheet.paddingMm) : DEFAULT_PADDING_MM);
     setSelectedIds(sheet.items.map(i => i.designId));
     setQuantities(Object.fromEntries(sheet.items.map(i => [i.designId, String(i.qty)])));
     setSaveError(null);
@@ -162,7 +168,7 @@ export default function NestingPage() {
     setSaving(true);
     setSaveError(null);
     try {
-      const body = JSON.stringify({ sheetWidthCm: parseFloat(sheetWidthCm), items });
+      const body = JSON.stringify({ sheetWidthCm: parseFloat(sheetWidthCm), paddingMm: parseFloat(paddingMm) || 0, items });
       const r = editingSheetId
         ? await fetch(`/api/admin/nesting-sheets/${encodeURIComponent(editingSheetId)}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body })
         : await fetch('/api/admin/nesting-sheets', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body });
@@ -220,8 +226,8 @@ export default function NestingPage() {
     });
 
     if (items.length === 0) { setResult(null); return; }
-    setResult(packShelves(items, width));
-  }, [selectedIds, quantities, sheetWidthCm, designs]);
+    setResult(packShelves(items, width, (parseFloat(paddingMm) || 0) / 10));
+  }, [selectedIds, quantities, sheetWidthCm, paddingMm, designs]);
 
   useEffect(() => {
     if (!result || !canvasRef.current) return;
@@ -487,6 +493,12 @@ ${images}
               <input type="number" min="0" step="0.1" value={sheetWidthCm} onChange={e => setSheetWidthCm(e.target.value)} disabled={sheetLocked}
                 className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 focus:border-gray-400 focus:outline-none disabled:bg-gray-50 disabled:text-gray-400" />
               <span className="mt-1 block text-xs text-gray-400">Defaults to the {DTF_ROLL_WIDTH_CM}cm roll width.</span>
+            </label>
+            <label className="mt-3 block">
+              <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-gray-400">Cutting margin (mm)</span>
+              <input type="number" min="0" step="0.5" value={paddingMm} onChange={e => setPaddingMm(e.target.value)} disabled={sheetLocked}
+                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 focus:border-gray-400 focus:outline-none disabled:bg-gray-50 disabled:text-gray-400" />
+              <span className="mt-1 block text-xs text-gray-400">Gap left between prints, and around the sheet edge, so the pieces can be cut apart.</span>
             </label>
             <div className="mt-3 flex items-center gap-2">
               <button onClick={saveSheet} disabled={saving || sheetLocked}

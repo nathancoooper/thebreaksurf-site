@@ -25,6 +25,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   const updated: NestingSheet = {
     ...existing,
     sheetWidthCm: body.sheetWidthCm > 0 ? Number(body.sheetWidthCm) : existing.sheetWidthCm,
+    paddingMm: body.paddingMm !== undefined ? (Number.isFinite(Number(body.paddingMm)) ? Number(body.paddingMm) : existing.paddingMm) : existing.paddingMm,
     items: Array.isArray(body.items) && body.items.length > 0
       ? (body.items as NestingSheetItem[]).map(i => ({ designId: i.designId, qty: Number(i.qty) }))
       : existing.items,

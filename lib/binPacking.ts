@@ -60,19 +60,31 @@ function pruneContained(rects: Rect[]): Rect[] {
 // sheet width is fixed and height grows to fit, so packing starts against
 // a generously tall virtual sheet and the real height is measured from
 // wherever pieces actually landed.
-export function packShelves(items: PackItem[], sheetWidthCm: number): PackResult {
-  const sorted = [...items].sort((a, b) => b.heightCm - a.heightCm || b.widthCm - a.widthCm);
-  const tallEnough = sorted.reduce((sum, i) => sum + i.heightCm, 0) + 1;
+//
+// `gapCm` is the cuttable margin: each piece reserves its own size plus one
+// gap, so neighbouring prints never touch, and the same gap is used as the
+// sheet's outer margin so nothing sits flush against the film edge.
+export function packShelves(items: PackItem[], sheetWidthCm: number, gapCm = 0): PackResult {
+  const pad = Math.max(0, gapCm);
+  const usableWidth = sheetWidthCm - pad * 2;
+  if (usableWidth <= 0) return { placed: [], sheetWidthCm, sheetHeightCm: 0 };
 
-  let freeRects: Rect[] = [{ x: 0, y: 0, width: sheetWidthCm, height: tallEnough }];
+  const sorted = [...items].sort((a, b) => b.heightCm - a.heightCm || b.widthCm - a.widthCm);
+  const tallEnough = sorted.reduce((sum, i) => sum + i.heightCm + pad, 0) + pad;
+
+  let freeRects: Rect[] = [{ x: pad, y: pad, width: usableWidth, height: tallEnough }];
   const placed: PlacedItem[] = [];
 
   for (const item of sorted) {
+    const cellWidth = item.widthCm + pad;
+    const cellHeight = item.heightCm + pad;
+    if (cellWidth > usableWidth) continue;
+
     let best: Rect | null = null;
     let bestLeftoverArea = Infinity;
     for (const r of freeRects) {
-      if (item.widthCm <= r.width && item.heightCm <= r.height) {
-        const leftover = r.width * r.height - item.widthCm * item.heightCm;
+      if (cellWidth <= r.width && cellHeight <= r.height) {
+        const leftover = r.width * r.height - cellWidth * cellHeight;
         if (leftover < bestLeftoverArea) { bestLeftoverArea = leftover; best = r; }
       }
     }
@@ -81,12 +93,14 @@ export function packShelves(items: PackItem[], sheetWidthCm: number): PackResult
     // than throw if it ever does.
     if (!best) continue;
 
-    const placedRect: Rect = { x: best.x, y: best.y, width: item.widthCm, height: item.heightCm };
+    // The footprint includes the gap; the artwork is drawn at its top-left,
+    // leaving the margin to the right and below.
+    const placedRect: Rect = { x: best.x, y: best.y, width: cellWidth, height: cellHeight };
     placed.push({ ...item, x: placedRect.x, y: placedRect.y });
 
     freeRects = pruneContained(freeRects.flatMap(r => splitFreeRect(r, placedRect)).filter(r => r.width > 1e-6 && r.height > 1e-6));
   }
 
-  const sheetHeightCm = placed.reduce((max, p) => Math.max(max, p.y + p.heightCm), 0);
+  const sheetHeightCm = placed.reduce((max, p) => Math.max(max, p.y + p.heightCm + pad), 0);
   return { placed, sheetWidthCm, sheetHeightCm };
 }
