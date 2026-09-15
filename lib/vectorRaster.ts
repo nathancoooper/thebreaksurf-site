@@ -21,6 +21,19 @@ const MEASURE_EDGE = 2048;
 // Image sent to the dialog; the reported width/height stay the true ones.
 const PREVIEW_EDGE = 320;
 
+// Rasters that can carry real transparency. JPEG has none (nothing to trim)
+// and GIF is usually animation, where cropping would discard frames.
+export const TRIMMABLE_RASTER_EXTS = new Set(['.png', '.webp', '.avif', '.tif', '.tiff', '.bmp']);
+
+export function fileExt(filename: string): string {
+  return filename.includes('.') ? '.' + filename.split('.').pop()!.toLowerCase() : '';
+}
+
+export function isTrimmableRaster(filename: string): boolean {
+  const ext = fileExt(filename);
+  return !VECTOR_EXTS.has(ext) && TRIMMABLE_RASTER_EXTS.has(ext);
+}
+
 export function isVectorFile(filename: string): boolean {
   const ext = filename.includes('.') ? '.' + filename.split('.').pop()!.toLowerCase() : '';
   return VECTOR_EXTS.has(ext);
@@ -224,4 +237,45 @@ export async function rasteriseVectorPreview(source: Buffer, dpi = 150): Promise
   if (!trimmed) return null;
   const small = trimmed.width > PREVIEW_EDGE ? await scalePng(trimmed.png, PREVIEW_EDGE) : null;
   return { png: small ?? trimmed.png, width: trimmed.width, height: trimmed.height };
+}
+
+async function toPng(source: Buffer, alreadyPng: boolean): Promise<Buffer | null> {
+  if (alreadyPng) return source;
+  const dir = await mkdtemp(path.join(tmpdir(), 'topng-'));
+  const inPath = path.join(dir, 'in');
+  const outPath = path.join(dir, 'out.png');
+  try {
+    await writeFile(inPath, source);
+    await run('ffmpeg', ['-v', 'error', '-i', inPath, '-frames:v', '1', '-y', outPath], { timeout: 120_000, maxBuffer: 8 * 1024 * 1024 });
+    const png = await readFile(outPath);
+    return png.length ? png : null;
+  } catch (error) {
+    console.error('[vectorRaster] transcode failed:', error);
+    return null;
+  } finally {
+    await rm(dir, { recursive: true, force: true }).catch(() => {});
+  }
+}
+
+/**
+ * Trims blank margins from an uploaded raster. Only does anything when the
+ * image carries real transparency *and* the artwork doesn't reach the edges -
+ * a fully opaque image (or a JPEG flattened to one) fills the canvas, so it is
+ * left exactly as uploaded. Returns null when nothing should change.
+ */
+export async function trimRasterUpload(source: Buffer): Promise<{ png: Buffer; width: number; height: number } | null> {
+  const png = await toPng(source, pngSize(source) !== null);
+  if (!png) return null;
+  const size = pngSize(png);
+  if (!size) return null;
+
+  const box = await inkBox(png, size.width, size.height);
+  if (!box) return null;
+  if (box.width >= size.width && box.height >= size.height) return null;
+
+  const cropped = await cropPng(png, box);
+  if (!cropped) return null;
+  const croppedSize = pngSize(cropped);
+  if (!croppedSize) return null;
+  return { png: cropped, width: croppedSize.width, height: croppedSize.height };
 }

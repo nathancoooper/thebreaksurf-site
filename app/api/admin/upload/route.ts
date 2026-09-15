@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdminFromRequest, unauthorised } from '@/lib/adminAuth';
 import { uploadToR2, listR2Files, deleteFromR2 } from '@/lib/r2';
-import { isVectorFile, rasteriseVector } from '@/lib/vectorRaster';
+import { isVectorFile, isTrimmableRaster, rasteriseVector, trimRasterUpload } from '@/lib/vectorRaster';
 
 // Safari downloads video/quicktime as .qt — normalise to common extensions.
 const MIME_EXT: Record<string, string> = {
@@ -125,6 +125,18 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const pngKey = key.replace(/\.[a-z0-9]+$/i, '.png');
     await uploadToR2(pngKey, png, 'image/png');
     return NextResponse.json({ path: `/api/r2/${pngKey}`, sourcePath: `/api/r2/${key}` });
+  }
+
+  // Rasters with real transparency get their blank margins trimmed too, so the
+  // size entered refers to the artwork rather than to empty space around it.
+  if (isTrimmableRaster(filename)) {
+    const trimmed = await trimRasterUpload(content);
+    if (trimmed) {
+      const pngKey = key.replace(/\.[a-z0-9]+$/i, '.png');
+      await uploadToR2(pngKey, trimmed.png, 'image/png');
+      if (pngKey !== key) await deleteFromR2(key).catch(() => {});
+      return NextResponse.json({ path: `/api/r2/${pngKey}` });
+    }
   }
 
   return NextResponse.json({ path: `/api/r2/${key}` });
