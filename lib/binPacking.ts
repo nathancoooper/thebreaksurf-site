@@ -74,7 +74,7 @@ function pruneContained(rects: Rect[]): Rect[] {
 // `gapCm` is the cuttable margin: each piece reserves its own size plus one
 // gap, so neighbouring prints never touch, and the same gap is used as the
 // sheet's outer margin so nothing sits flush against the film edge.
-type RotationMode = 'none' | 'small' | 'envelope';
+type RotationMode = 'none' | 'small' | 'fill' | 'columns';
 
 function packOnce(items: PackItem[], sheetWidthCm: number, gapCm: number, mode: RotationMode): PackResult {
   const allowRotation = mode !== 'none';
@@ -104,7 +104,7 @@ function packOnce(items: PackItem[], sheetWidthCm: number, gapCm: number, mode: 
       item.widthCm + pad <= r.width && item.heightCm + pad <= r.height);
     const canTurn = allowRotation && Math.abs(item.widthCm - item.heightCm) > 1e-9;
 
-    let best: { rect: Rect; rotated: boolean; leftover: number } | null = null;
+    let best: { rect: Rect; rotated: boolean; leftover: number; bottom: number } | null = null;
     for (const r of freeRects) {
       for (const rotated of [false, true]) {
         if (rotated && !canTurn) continue;
@@ -113,22 +113,33 @@ function packOnce(items: PackItem[], sheetWidthCm: number, gapCm: number, mode: 
         const cellWidth = w + pad;
         const cellHeight = h + pad;
         if (cellWidth > r.width || cellHeight > r.height) continue;
-        if (rotated) {
-          // Two heuristics, each of which wins on different sheets; packShelves
-          // runs both and keeps the shorter result.
-          if (mode === 'small' && fitsUprightSomewhere) {
-            // Only pieces that are small next to the sheet are worth turning.
+        if (rotated && fitsUprightSomewhere) {
+          // Several heuristics, each of which wins on different sheets;
+          // packShelves runs them all and keeps the shortest result.
+          if (mode === 'small') {
+            // Only pieces small next to the sheet are worth turning.
             if (Math.max(item.widthCm, item.heightCm) > sheetWidthCm * 0.25) continue;
-          } else if (mode === 'envelope' && fitsUprightSomewhere) {
+          } else if (mode === 'fill') {
             // Only fill length the sheet already needs.
             if (r.y + cellHeight > envelopeCm + 1e-9) continue;
+          } else if (mode === 'columns') {
+            // Turning must not cost more length than leaving it upright
+            // would — true when a piece is shorter on its side, which is what
+            // makes a column of turned pieces pay for itself.
+            if (r.y + cellHeight > envelopeCm + item.heightCm + pad + 1e-9) continue;
           }
         }
         const leftover = r.width * r.height - cellWidth * cellHeight;
+        // Tightest fit first; when that ties — which it does for a plain
+        // 90° turn, since the footprint area is identical — take the
+        // shallower placement, because sheet length is what gets bought.
+        // Only then prefer leaving the piece upright.
+        const bottom = r.y + cellHeight;
         if (!best
           || leftover < best.leftover - 1e-9
-          || (Math.abs(leftover - best.leftover) < 1e-9 && best.rotated && !rotated)) {
-          best = { rect: r, rotated, leftover };
+          || (Math.abs(leftover - best.leftover) < 1e-9 && bottom < best.bottom - 1e-9)
+          || (Math.abs(leftover - best.leftover) < 1e-9 && Math.abs(bottom - best.bottom) < 1e-9 && best.rotated && !rotated)) {
+          best = { rect: r, rotated, leftover, bottom };
         }
       }
     }
@@ -163,7 +174,8 @@ export function packShelves(items: PackItem[], sheetWidthCm: number, gapCm = 0, 
   const candidates: PackResult[] = [packOnce(items, sheetWidthCm, gapCm, 'none')];
   if (allowRotation) {
     candidates.push(packOnce(items, sheetWidthCm, gapCm, 'small'));
-    candidates.push(packOnce(items, sheetWidthCm, gapCm, 'envelope'));
+    candidates.push(packOnce(items, sheetWidthCm, gapCm, 'fill'));
+    candidates.push(packOnce(items, sheetWidthCm, gapCm, 'columns'));
   }
 
   // Whichever layout places the most pieces wins; ties go to the shortest
