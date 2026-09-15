@@ -231,8 +231,20 @@ export default function NestingPage() {
 
     canvas.width = result.sheetWidthCm * PX_PER_CM;
     canvas.height = result.sheetHeightCm * PX_PER_CM;
+
+    // The sheet is clear DTF film and the artwork on it is very often white,
+    // so a plain white background made a correctly-packed sheet look empty.
+    // Draw a transparency checkerboard instead, which is both readable and
+    // closer to what the film actually looks like.
+    const CHECK = PX_PER_CM / 2; // 0.5 cm squares
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#ececec';
+    for (let row = 0; row * CHECK < canvas.height; row++) {
+      for (let col = 0; col * CHECK < canvas.width; col++) {
+        if ((row + col) % 2 === 0) ctx.fillRect(col * CHECK, row * CHECK, CHECK, CHECK);
+      }
+    }
 
     const byDesignId = new Map(designs.map(d => [d.id, d]));
     const images = new Map<string, HTMLImageElement>();
@@ -259,7 +271,16 @@ export default function NestingPage() {
         const designId = piece.id.split('::')[0];
         const img = images.get(designId);
         if (!img) continue;
-        ctx.drawImage(img, piece.x * PX_PER_CM, piece.y * PX_PER_CM, piece.widthCm * PX_PER_CM, piece.heightCm * PX_PER_CM);
+        const x = piece.x * PX_PER_CM;
+        const y = piece.y * PX_PER_CM;
+        const w = piece.widthCm * PX_PER_CM;
+        const h = piece.heightCm * PX_PER_CM;
+        ctx.drawImage(img, x, y, w, h);
+        // A faint outline so each placement is legible even when the artwork
+        // is white (or a dark design on a dark area).
+        ctx.strokeStyle = 'rgba(0,0,0,0.15)';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(x + 0.5, y + 0.5, Math.max(w - 1, 1), Math.max(h - 1, 1));
       }
     }
   }, [result, designs]);
