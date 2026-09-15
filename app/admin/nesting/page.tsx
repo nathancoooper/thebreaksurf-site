@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { packShelves, type PackResult } from '@/lib/binPacking';
+import { useTheme } from '@/components/ThemeProvider';
 import { DTF_ROLL_WIDTH_CM, tierForMeters } from '@/lib/dtfPricing';
 
 interface Design {
@@ -88,6 +89,7 @@ async function toDataUri(url: string, widthCm: number, heightCm: number): Promis
 }
 
 export default function NestingPage() {
+  const { resolvedTheme } = useTheme();
   const [designs, setDesigns] = useState<Design[]>([]);
   const [loading, setLoading] = useState(true);
   const [sheetWidthCm, setSheetWidthCm] = useState(String(DTF_ROLL_WIDTH_CM));
@@ -241,11 +243,14 @@ export default function NestingPage() {
     // The sheet is clear DTF film and the artwork on it is very often white,
     // so a plain white background made a correctly-packed sheet look empty.
     // Draw a transparency checkerboard instead, which is both readable and
-    // closer to what the film actually looks like.
+    // closer to what the film actually looks like. Colours come from CSS vars
+    // so the preview matches whichever theme the page is in.
+    const css = getComputedStyle(document.documentElement);
+    const varOr = (name: string, fallback: string) => css.getPropertyValue(name).trim() || fallback;
     const CHECK = PX_PER_CM / 2; // 0.5 cm squares
-    ctx.fillStyle = '#ffffff';
+    ctx.fillStyle = varOr('--tbs-checker-a', '#ffffff');
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = '#ececec';
+    ctx.fillStyle = varOr('--tbs-checker-b', '#ececec');
     for (let row = 0; row * CHECK < canvas.height; row++) {
       for (let col = 0; col * CHECK < canvas.width; col++) {
         if ((row + col) % 2 === 0) ctx.fillRect(col * CHECK, row * CHECK, CHECK, CHECK);
@@ -289,7 +294,7 @@ export default function NestingPage() {
         ctx.strokeRect(x + 0.5, y + 0.5, Math.max(w - 1, 1), Math.max(h - 1, 1));
       }
     }
-  }, [result, designs]);
+  }, [result, designs, resolvedTheme]);
 
   async function downloadSvg() {
     if (!result) return;
@@ -627,8 +632,19 @@ ${images}
             {!result ? (
               <p className="text-sm text-gray-400">Add a design and set a quantity to see the layout.</p>
             ) : (
-              <div className="overflow-auto rounded-lg border border-gray-100 bg-gray-50 p-3">
-                <canvas ref={canvasRef} className="max-w-full" style={{ width: `${Math.min(result.sheetWidthCm * PX_PER_CM, 700)}px` }} />
+              <div className="overflow-auto rounded-lg border border-gray-100 bg-gray-50 p-2">
+                {/* Fills the panel rather than being capped at a fixed width,
+                    and the sheet itself is outlined so the printable area is
+                    obvious against the checkerboard. */}
+                <canvas
+                  ref={canvasRef}
+                  className="block h-auto w-full rounded-[2px]"
+                  style={{
+                    // border-box sizing keeps the outline from enlarging the canvas
+                    boxSizing: 'border-box',
+                    border: '2px solid var(--tbs-sheet-line, #eab308)',
+                  }}
+                />
               </div>
             )}
             {result && (

@@ -191,7 +191,16 @@ a {
 /* Staff panels resolve device and explicit preferences to one attribute before
    first paint. Exact class-token matching avoids turning hover utilities into
    permanent colours. */
+/* Nesting preview: the sheet is clear film, shown as a transparency
+   checkerboard. These flip with the theme so the preview matches the page. */
+:root {
+  --tbs-checker-a: #ffffff;
+  --tbs-checker-b: #ececec;
+  --tbs-sheet-line: #eab308;
+}
 html[data-tbs-theme-resolved='dark'] .tbs-dark-surface {
+  --tbs-checker-a: #111111;
+  --tbs-checker-b: #1c1c1c;
   --tbs-panel: #111111;
   --tbs-panel-raised: #1a1a1a;
   --tbs-control: #222222;
