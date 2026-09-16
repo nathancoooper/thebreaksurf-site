@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { packShelves, footprint, type PackResult } from '@/lib/binPacking';
 import { useTheme } from '@/components/ThemeProvider';
+import { PngStream } from '@/lib/pngStream';
 import { DTF_ROLL_WIDTH_CM, tierForMeters } from '@/lib/dtfPricing';
 
 interface Design {
@@ -120,7 +121,8 @@ export default function NestingPage() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [quantities, setQuantities] = useState<Record<string, string>>({});
   const [result, setResult] = useState<PackResult | null>(null);
-  const [exporting, setExporting] = useState(false);
+  const [exporting, setExporting] = useState<null | 'svg' | 'png'>(null);
+  const [exportProgress, setExportProgress] = useState(0);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   // A saved sheet is just design IDs + quantities + the sheet width — the
@@ -340,9 +342,93 @@ export default function NestingPage() {
     }
   }, [result, designs, resolvedTheme]);
 
+  // Renders the sheet at 300 DPI and streams it into a single PNG. The sheet
+  // is drawn in horizontal bands because a long one is far taller than a
+  // browser canvas can be, but the result is still one file, which is what
+  // the printer expects.
+  async function downloadPng() {
+    if (!result) return;
+    setExporting('png');
+    setExportProgress(0);
+    try {
+      const byDesignId = new Map(designs.map(d => [d.id, d]));
+      const uniqueDesignIds = [...new Set(result.placed.map(p => p.id.split('::')[0]))];
+      const images = new Map<string, HTMLImageElement>();
+      await Promise.all(uniqueDesignIds.map(async id => {
+        const design = byDesignId.get(id);
+        if (!design) return;
+        const img = new Image();
+        await new Promise<void>(resolve => {
+          img.onload = () => resolve();
+          img.onerror = () => resolve();
+          img.src = design.imagePath;
+        });
+        if (img.naturalWidth) images.set(id, img);
+      }));
+
+      const pxPerCm = EXPORT_DPI / CM_PER_INCH;
+      const width = Math.round(result.sheetWidthCm * pxPerCm);
+      const height = Math.round(result.sheetHeightCm * pxPerCm);
+      // ~30 megapixels per band: comfortable for a tab, a handful of bands
+      // for even the longest sheet.
+      const bandRows = Math.max(1, Math.floor(30_000_000 / width));
+
+      const png = new PngStream(width, height);
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('Canvas unavailable');
+
+      let previousRow: Uint8Array | null = null;
+      for (let y0 = 0; y0 < height; y0 += bandRows) {
+        const rows = Math.min(bandRows, height - y0);
+        canvas.width = width;
+        canvas.height = rows;
+        ctx.clearRect(0, 0, width, rows);
+
+        for (const piece of result.placed) {
+          const img = images.get(piece.id.split('::')[0]);
+          if (!img) continue;
+          const fp = footprint(piece);
+          const x = piece.x * pxPerCm;
+          const y = piece.y * pxPerCm - y0;
+          const w = piece.widthCm * pxPerCm;
+          const h = piece.heightCm * pxPerCm;
+          const fw = fp.widthCm * pxPerCm;
+          const fh = fp.heightCm * pxPerCm;
+          if (y + fh < 0 || y > rows) continue;
+          if (piece.rotated) {
+            ctx.save();
+            ctx.translate(x + fw, y);
+            ctx.rotate(Math.PI / 2);
+            ctx.drawImage(img, 0, 0, w, h);
+            ctx.restore();
+          } else {
+            ctx.drawImage(img, x, y, w, h);
+          }
+        }
+
+        const band = ctx.getImageData(0, 0, width, rows);
+        previousRow = await png.addBand(new Uint8Array(band.data.buffer), rows, previousRow);
+        setExportProgress(Math.round(((y0 + rows) / height) * 100));
+      }
+
+      const blob = await png.finish();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `dtf-sheet-${sheetDisplayName ?? 'export'}.png`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : 'PNG export failed');
+    } finally {
+      setExporting(null);
+    }
+  }
+
   async function downloadSvg() {
     if (!result) return;
-    setExporting(true);
+    setExporting('svg');
     try {
       const byDesignId = new Map(designs.map(d => [d.id, d]));
       const uniqueDesignIds = [...new Set(result.placed.map(p => p.id.split('::')[0]))];
@@ -353,36 +439,47 @@ export default function NestingPage() {
         dataUris.set(id, await toDataUri(design.imagePath, design.widthCm, design.heightCm));
       }));
 
-      // Every placement gets its own full inline <image> — a <defs>/<use>
-      // version that embedded each design once and referenced it per
-      // placement was tried, but Affinity's SVG importer doesn't support
-      // <use> re-instancing an external <defs> element at all: it just
-      // rendered the raw <defs> content once, in place, and silently
-      // dropped every <use>. Firefox rendered that version perfectly fine,
-      // which is what made it easy to miss — Affinity is the tool this
-      // actually needs to work in, so full duplication (larger files) is
-      // the accepted tradeoff over an approach that's "correct" SVG but
-      // doesn't work in the target app.
-      const images = result.placed.map(piece => {
+      // Each design is embedded ONCE in <defs> and referenced per placement
+      // with <use>. Embedding a full copy per placement meant a 24 MB design
+      // placed 14 times produced a ~340 MB file, which overflowed the
+      // browser's string limit and failed the export outright.
+      //
+      // The trade-off: Affinity's SVG importer has historically ignored <use>
+      // instances (drawing one copy and dropping the rest). If the sheet opens
+      // with a single print, that is this - switch to the PDF export instead.
+      const seen = new Set<string>();
+      const defs: string[] = [];
+      const uses: string[] = [];
+
+      for (const piece of result.placed) {
         const designId = piece.id.split('::')[0];
+        const design = byDesignId.get(designId);
         const href = dataUris.get(designId);
-        if (!href) return '';
-        // Both href and xlink:href — modern browsers only need the former,
-        // but design tools like Affinity/Illustrator still only recognise
-        // the older xlink:href and silently render a zero-size image
-        // without it.
-        if (piece.rotated) {
-          // Draw upright at the origin, then turn 90° clockwise about the
-          // footprint's top-right corner so it lands exactly in the box.
-          return `<image href="${href}" xlink:href="${href}" x="0" y="0" width="${piece.widthCm}" height="${piece.heightCm}" transform="translate(${piece.x + piece.heightCm} ${piece.y}) rotate(90)" preserveAspectRatio="none" />`;
+        if (!design || !href) continue;
+        // ids must not start with a digit, hence the prefix
+        const refId = `design-${designId}`;
+
+        if (!seen.has(designId)) {
+          seen.add(designId);
+          defs.push(`<image id="${refId}" x="0" y="0" width="${design.widthCm}" height="${design.heightCm}" preserveAspectRatio="none" href="${href}" xlink:href="${href}" />`);
         }
-        return `<image href="${href}" xlink:href="${href}" x="${piece.x}" y="${piece.y}" width="${piece.widthCm}" height="${piece.heightCm}" preserveAspectRatio="none" />`;
-      }).join('\n');
+
+        // Both href and xlink:href — modern browsers only need the former,
+        // but design tools like Affinity/Illustrator still only recognise the
+        // older xlink:href and silently render a zero-size image without it.
+        const transform = piece.rotated
+          ? `transform="translate(${piece.x + piece.heightCm} ${piece.y}) rotate(90)"`
+          : `transform="translate(${piece.x} ${piece.y})"`;
+        uses.push(`<use ${transform} href="#${refId}" xlink:href="#${refId}" />`);
+      }
 
       // No background rect — a DTF print file should only lay down ink
       // where the artwork actually is, not a solid sheet behind it.
       const svg = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${result.sheetWidthCm}cm" height="${result.sheetHeightCm}cm" viewBox="0 0 ${result.sheetWidthCm} ${result.sheetHeightCm}">
-${images}
+<defs>
+${defs.join('\n')}
+</defs>
+${uses.join('\n')}
 </svg>`;
 
       const blob = new Blob([svg], { type: 'image/svg+xml' });
@@ -393,7 +490,7 @@ ${images}
       link.click();
       URL.revokeObjectURL(url);
     } finally {
-      setExporting(false);
+      setExporting(null);
     }
   }
 
@@ -802,9 +899,22 @@ ${images}
             <div className="mb-3 flex items-center justify-between">
               <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">Layout</p>
               {result && (
-                <button onClick={downloadSvg} disabled={exporting} className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-40 transition-colors">
-                  {exporting ? 'Exporting…' : 'Download SVG'}
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={downloadSvg}
+                    disabled={!!exporting}
+                    className="rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-40 transition-colors"
+                  >
+                    SVG
+                  </button>
+                  <button
+                    onClick={downloadPng}
+                    disabled={!!exporting}
+                    className="rounded-lg bg-gray-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-700 disabled:opacity-40 transition-colors"
+                  >
+                    {exporting === 'png' ? `Exporting… ${exportProgress}%` : 'Download PNG'}
+                  </button>
+                </div>
               )}
             </div>
             {!result ? (
