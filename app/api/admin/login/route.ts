@@ -30,6 +30,21 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Incorrect email or password' }, { status: 401 });
   }
 
+  // No secret means 2FA isn't set up on this account, so sign straight in.
+  // This used to always return step 'totp', which left an account with no
+  // secret staring at a code field nothing could ever satisfy.
+  if (!user.totpSecret) {
+    const fullToken = await signSession({ sub: user.id }, '7d');
+    const response = NextResponse.json({ step: 'done' });
+    setSessionCookie(response, fullToken, 60 * 60 * 24 * 7);
+    await recordLoginAttempt(request, {
+      userId: user.id,
+      email: user.email,
+      outcome: 'success',
+    }).catch(error => console.error('[login audit] failed:', error));
+    return response;
+  }
+
   const token = await signSession({ sub: user.id, pending2FA: true }, '10m');
   const response = NextResponse.json({ step: 'totp' });
   setSessionCookie(response, token, 60 * 10);

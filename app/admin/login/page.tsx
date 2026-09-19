@@ -79,6 +79,8 @@ export default function LoginPage() {
     });
     const data = await res.json();
     if (!res.ok) { setError(data.error ?? 'Incorrect email or password'); setBusy(false); return; }
+    // Accounts without a 2FA secret are signed in by this step already.
+    if (data.step !== 'totp') { router.push(signedInPath); return; }
     setStep('totp');
     setBusy(false);
   }
