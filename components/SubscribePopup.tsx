@@ -113,7 +113,17 @@ export default function SubscribePopup() {
           className="absolute right-3 top-3 flex h-7 w-7 items-center justify-center rounded-full bg-black/40 text-white transition-colors hover:bg-black/60"
           aria-label="Close"
         >
-          ×
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            className="h-3.5 w-3.5"
+            aria-hidden="true"
+          >
+            <path d="M6 6l12 12M18 6L6 18" />
+          </svg>
         </button>
 
         {status === 'done' ? (
@@ -161,11 +171,8 @@ export default function SubscribePopup() {
           </div>
         ) : (
           <>
-            <p className="text-xs font-medium uppercase tracking-[0.2em] text-terra">
-              10% off your first order
-            </p>
-            <h2 className="mt-2 font-display text-2xl font-medium text-charcoal">
-              Join the list
+            <h2 className="font-display text-2xl font-medium text-charcoal">
+              10% OFF
             </h2>
             <p className="mt-2 text-sm leading-relaxed text-charcoal/60">
               Drop news, early access, and the occasional offer — plus a
@@ -206,13 +213,7 @@ export default function SubscribePopup() {
                   onChange={e => setConsent(e.target.checked)}
                   className="mt-0.5 h-4 w-4 shrink-0 accent-terra"
                 />
-                <span>
-                  Yes, send me marketing emails (new drops and offers). I can{' '}
-                  <Link href="/privacy" className="underline underline-offset-2 hover:text-charcoal">
-                    unsubscribe
-                  </Link>{' '}
-                  any time.
-                </span>
+                <span>Yes, send me marketing emails (new drops and offers).</span>
               </label>
 
               {status === 'error' && <p className="text-xs text-red-600">{error}</p>}
@@ -227,8 +228,7 @@ export default function SubscribePopup() {
             </form>
 
             <p className="mt-4 text-[11px] leading-relaxed text-charcoal/40">
-              Order confirmations and dispatch updates are separate —
-              unsubscribing from this list never stops them. See our{' '}
+              Unsubscribe at any time. See our{' '}
               <Link href="/privacy" className="underline underline-offset-2 hover:text-charcoal/60">
                 privacy policy
               </Link>

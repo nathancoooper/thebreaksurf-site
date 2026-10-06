@@ -2,6 +2,7 @@ import { CartProvider } from '@/contexts/CartContext';
 import Navbar from '@/components/Navbar';
 import MainWrapper from '@/components/MainWrapper';
 import ScrollToTop from '@/components/ScrollToTop';
+import TopEdgeGuard from '@/components/TopEdgeGuard';
 import HitTracker from '@/components/HitTracker';
 import NavHistoryTracker from '@/components/NavHistoryTracker';
 import MaintenanceBanner from '@/components/MaintenanceBanner';
@@ -19,6 +20,7 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
       <MaintenanceBanner />
       <HitTracker />
       <ScrollToTop />
+      <TopEdgeGuard />
       <NavHistoryTracker />
       <Navbar categories={categories} />
       <MainWrapper>{children}</MainWrapper>
