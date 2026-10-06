@@ -709,6 +709,74 @@ export function universityDropoffAlertHtml(props: UniversityDropoffAlertProps): 
 </html>`;
 }
 
+export interface WelcomeSubscriptionProps {
+  to: string;
+  code: string;
+  percent: number;
+  unsubscribeUrl: string;
+}
+
+export function welcomeSubscriptionHtml(props: WelcomeSubscriptionProps): string {
+  const { code, percent, unsubscribeUrl } = props;
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f5f2ec;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f2ec;padding:32px 16px;">
+<tr><td align="center">
+<table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;">
+
+  <tr><td align="center" style="padding:32px 0 24px;">
+    <a href="https://thebreaksurf.co.uk" style="display:inline-block;text-decoration:none;">${logoSvg()}</a>
+  </td></tr>
+
+  <tr><td style="background:#ffffff;border-radius:6px;padding:36px;">
+    <p style="margin:0 0 6px;font-size:11px;font-weight:600;letter-spacing:0.15em;text-transform:uppercase;color:#c4622d;font-family:Arial,sans-serif;">Welcome to the list</p>
+    <p style="margin:0 0 12px;font-size:26px;font-weight:500;color:#1c1c1c;font-family:Georgia,serif;">Here's ${percent}% off.</p>
+    <p style="margin:0;font-size:14px;color:#666;line-height:1.6;font-family:Arial,sans-serif;">
+      Thanks for signing up. Your single-use code is below — enter it with this email address at checkout for ${percent}% off your total order.
+    </p>
+
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:24px;">
+      <tr><td style="background:#f9f7f4;border:1px dashed #d8cfc0;border-radius:4px;padding:20px;text-align:center;">
+        <p style="margin:0 0 6px;font-size:11px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:#aaa;font-family:Arial,sans-serif;">Your code</p>
+        <p style="margin:0;font-size:24px;font-weight:600;color:#1c1c1c;font-family:monospace;letter-spacing:0.08em;">${code}</p>
+      </td></tr>
+    </table>
+
+    <p style="margin:20px 0 0;font-size:13px;color:#888;line-height:1.6;font-family:Arial,sans-serif;">
+      One per customer, tied to this email address. Not combinable with other offers.
+    </p>
+  </td></tr>
+
+  <tr><td style="padding:24px;text-align:center;">
+    <p style="margin:0 0 8px;font-size:11px;font-family:Arial,sans-serif;">
+      <a href="${unsubscribeUrl}" style="color:#aaa;text-decoration:none;">Unsubscribe from marketing emails</a>
+    </p>
+    <p style="margin:0;font-size:11px;color:#aaa;font-family:Arial,sans-serif;">
+      Order and dispatch emails are separate — this link never stops them.
+    </p>
+  </td></tr>
+
+</table>
+</td></tr>
+</table>
+</body>
+</html>`;
+}
+
+export async function sendWelcomeSubscription(props: WelcomeSubscriptionProps) {
+  const resend = await getResend();
+  return resend.emails.send({
+    from: FROM_EMAIL,
+    replyTo: REPLY_TO,
+    to: props.to,
+    subject: `${props.percent}% off — your welcome code`,
+    html: welcomeSubscriptionHtml(props),
+  });
+}
+
 export interface PickupReadyProps {
   studentName: string;
   garment: string;

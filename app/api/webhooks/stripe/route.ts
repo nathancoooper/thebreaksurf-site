@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getStripe } from '@/lib/stripe';
 import { getResend, FROM_EMAIL, REPLY_TO, sendOrderConfirmation, newOrderAlertHtml } from '@/lib/resend';
+import { consumeCode } from '@/lib/discountCodes';
 import { getDb } from '@/lib/db';
 
 type StripeEvent = import('stripe').default.Event;
@@ -32,6 +33,16 @@ export async function POST(req: NextRequest) {
     try {
       const session = await stripe.checkout.sessions.retrieve(stub.id);
       await handleCheckoutComplete(session, resend);
+
+      // Burn the newsletter code only once payment completed — an abandoned
+      // checkout never consumes it. Idempotent on retry (used_at IS NULL), so
+      // letting an error here bubble to Stripe's retry is safe: the retry
+      // skips the email step (pending_checkouts row already deleted) and
+      // re-attempts only the consume.
+      const discountCode = session.metadata?.discountCode;
+      if (discountCode) {
+        await consumeCode(discountCode, session.id, session.customer_details?.email);
+      }
     } catch (err) {
       console.error('[stripe webhook] failed for', stub.id, err);
       await resend.emails.send({

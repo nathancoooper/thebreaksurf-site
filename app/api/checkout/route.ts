@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getStripe } from '@/lib/stripe';
 import { CartItem } from '@/types';
 import { getDiscountPercent, applyDiscount } from '@/lib/promotions';
+import { validateCode } from '@/lib/discountCodes';
 import { getAvailability, variantItemCode } from '@/lib/stock';
 import { getDb } from '@/lib/db';
 
@@ -9,10 +10,26 @@ const FREE_SHIPPING_THRESHOLD = 5000; // £50, in pence — see app/shipping/pag
 
 export async function POST(req: NextRequest) {
   try {
-    const { items }: { items: CartItem[] } = await req.json();
+    const {
+      items,
+      discountCode,
+    }: { items: CartItem[]; discountCode?: { code?: string; email?: string } } = await req.json();
 
     if (!items || items.length === 0) {
       return NextResponse.json({ error: 'No items in cart' }, { status: 400 });
+    }
+
+    // Newsletter discount is re-validated here, server-side, never trusting
+    // the percent the cart displayed: the code must exist, be unused, and
+    // belong to the email address presented with it. Fail closed — a stale or
+    // foreign code blocks checkout rather than silently charging full price.
+    let codePercent = 0;
+    if (discountCode) {
+      const valid = await validateCode(discountCode.code, discountCode.email);
+      if (!valid) {
+        return NextResponse.json({ error: 'That discount code is no longer valid' }, { status: 400 });
+      }
+      codePercent = valid.percent;
     }
 
     // Stock is re-checked here, never trusting whatever the product page
@@ -58,6 +75,9 @@ export async function POST(req: NextRequest) {
 
       const discountPercent = await getDiscountPercent(item.product.id);
       if (discountPercent > 0) unitAmount = applyDiscount(unitAmount, discountPercent);
+      // Newsletter code applies on top of any promotion, same per-unit
+      // rounding the cart preview uses, so both sides agree to the penny.
+      if (codePercent > 0) unitAmount = applyDiscount(unitAmount, codePercent);
 
       return {
         price_data: {
@@ -95,6 +115,8 @@ export async function POST(req: NextRequest) {
       payment_method_types: ['card'],
       metadata: {
         appUrl,
+        discountCode: codePercent > 0 ? String(discountCode?.code ?? '').trim().toUpperCase() : '',
+        discountEmail: codePercent > 0 ? String(discountCode?.email ?? '').trim().toLowerCase() : '',
       },
       line_items,
       mode: 'payment',

@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import ProductCard from '@/components/ProductCard';
+import SubscribePopup from '@/components/SubscribePopup';
 import { Product, Event } from '@/types';
 import { getHero } from '@/lib/heroes';
 import { readData } from '@/lib/dataCache';
@@ -34,6 +35,7 @@ export default async function HomePage() {
   const hero = (await getHero('home'))!;
   return (
     <>
+      <SubscribePopup />
       <section className="relative h-screen w-full overflow-hidden">
         <Image
           src={hero.image}

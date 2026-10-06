@@ -18,6 +18,7 @@ const SECTIONS = [
     heading: 'What data we collect and why',
     body: [
       'When you place an order, we collect your name, email address, delivery address, and payment details. Payment information is processed securely by Stripe — we never see or store your full card details.',
+      'When you join our mailing list, we collect your email address and a timestamp of the consent you gave at sign-up, so we can email you and demonstrate we had permission.',
       'When you leave a review, we collect your name and the content of your review.',
       'When you contact us directly by email, we store that correspondence.',
       'We don\'t run analytics, use tracking pixels, or collect any data beyond what\'s listed above.',
@@ -28,6 +29,7 @@ const SECTIONS = [
     body: [
       'Order data is used to fulfil and deliver your order, communicate about it, and handle returns or issues.',
       'Your email address may be used to send you order confirmations and shipping updates. We won\'t add you to a marketing list without your explicit consent.',
+      'Mailing-list addresses are used only for marketing — new drops, offers, and the discount code you signed up with. Every marketing email includes an unsubscribe link, and unsubscribing never stops order or dispatch emails.',
       'Reviews are published on the relevant product page once approved.',
     ],
   },
@@ -35,6 +37,7 @@ const SECTIONS = [
     heading: 'Who we share your data with',
     body: [
       'Stripe — to process payments. Stripe is PCI DSS compliant and handles your card details securely. Their privacy policy is at stripe.com/privacy.',
+      'Resend — our email provider. They process your mailing-list email address on our instructions to deliver newsletters; they don\'t use it for their own purposes. Their privacy policy is at resend.com/legal/privacy-policy.',
       'Royal Mail or other carriers — your name and delivery address are passed to the carrier to fulfil your order.',
       'We don\'t sell your data. We don\'t share it with advertisers. We don\'t use third-party analytics services.',
     ],
@@ -82,7 +85,7 @@ export default function PrivacyPage() {
     <div className="mx-auto max-w-2xl px-6 py-20">
       <p className="mb-3 text-xs font-medium uppercase tracking-[0.25em] text-charcoal/40">Legal</p>
       <h1 className="font-display text-4xl font-medium text-charcoal">Privacy Policy</h1>
-      <p className="mt-4 text-sm text-charcoal/50">Last updated June 2026</p>
+      <p className="mt-4 text-sm text-charcoal/50">Last updated October 2026</p>
 
       <div className="mt-14 space-y-12">
         {SECTIONS.map(({ heading, body }) => (

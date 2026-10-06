@@ -10,6 +10,11 @@ export default function CartPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [discounts, setDiscounts] = useState<Record<string, number>>({});
+  const [codeInput, setCodeInput] = useState('');
+  const [emailInput, setEmailInput] = useState('');
+  const [codeError, setCodeError] = useState('');
+  const [applying, setApplying] = useState(false);
+  const [newsletterCode, setNewsletterCode] = useState<{ code: string; email: string; percent: number } | null>(null);
 
   useEffect(() => {
     const reset = () => { if (document.visibilityState === 'visible') setLoading(false); };
@@ -28,11 +33,48 @@ export default function CartPage() {
     return pct > 0 ? Math.round(basePrice * (1 - pct / 100)) : basePrice;
   }
 
-  const discountedTotal = items.reduce(
+  // Newsletter code stacks on top of any promotion with the same per-unit
+  // rounding the checkout route applies, so preview and charge agree exactly.
+  function lineUnitPrice(productId: string, basePrice: number) {
+    const promoPrice = unitPrice(productId, basePrice);
+    return newsletterCode ? Math.round(promoPrice * (1 - newsletterCode.percent / 100)) : promoPrice;
+  }
+
+  const promoTotal = items.reduce(
     (sum, i) => sum + unitPrice(i.product.id, i.product.price) * i.quantity,
     0
   );
-  const savings = total - discountedTotal;
+  const discountedTotal = items.reduce(
+    (sum, i) => sum + lineUnitPrice(i.product.id, i.product.price) * i.quantity,
+    0
+  );
+  const promoSavings = total - promoTotal;
+  const codeSavings = promoTotal - discountedTotal;
+
+  const applyCode = async () => {
+    if (!codeInput.trim() || !emailInput.trim()) {
+      setCodeError('Enter your code and the email you signed up with');
+      return;
+    }
+    setApplying(true);
+    setCodeError('');
+    try {
+      const res = await fetch('/api/validate-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: codeInput, email: emailInput }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'That code isn\'t valid');
+      setNewsletterCode({ code: data.code, email: data.email ?? emailInput.trim().toLowerCase(), percent: data.percent });
+      setCodeInput('');
+      setEmailInput('');
+    } catch (err) {
+      setCodeError(err instanceof Error ? err.message : 'That code isn\'t valid');
+    } finally {
+      setApplying(false);
+    }
+  };
 
   const handleCheckout = async () => {
     if (items.length === 0) return;
@@ -43,7 +85,12 @@ export default function CartPage() {
       const res = await fetch('/api/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ items }),
+        body: JSON.stringify({
+          items,
+          discountCode: newsletterCode
+            ? { code: newsletterCode.code, email: newsletterCode.email }
+            : undefined,
+        }),
       });
 
       if (!res.ok) {
@@ -129,9 +176,9 @@ export default function CartPage() {
                     </div>
                     <div className="text-right">
                       <p className="text-sm font-medium text-charcoal">
-                        £{((unitPrice(item.product.id, item.product.price) * item.quantity) / 100).toFixed(2)}
+                        £{((lineUnitPrice(item.product.id, item.product.price) * item.quantity) / 100).toFixed(2)}
                       </p>
-                      {discounts[item.product.id] > 0 && (
+                      {(discounts[item.product.id] > 0 || newsletterCode) && (
                         <p className="text-xs text-charcoal/40 line-through">
                           £{((item.product.price * item.quantity) / 100).toFixed(2)}
                         </p>
@@ -198,16 +245,74 @@ export default function CartPage() {
                 <span>Subtotal</span>
                 <span>£{(discountedTotal / 100).toFixed(2)}</span>
               </div>
-              {savings > 0 && (
+              {promoSavings > 0 && (
                 <div className="flex justify-between text-terra">
                   <span>Promotion savings</span>
-                  <span>-£{(savings / 100).toFixed(2)}</span>
+                  <span>-£{(promoSavings / 100).toFixed(2)}</span>
+                </div>
+              )}
+              {codeSavings > 0 && newsletterCode && (
+                <div className="flex justify-between text-terra">
+                  <span>Newsletter discount ({newsletterCode.percent}%)</span>
+                  <span>-£{(codeSavings / 100).toFixed(2)}</span>
                 </div>
               )}
               <div className="flex justify-between text-charcoal/70">
                 <span>Shipping</span>
                 <span>Calculated at checkout</span>
               </div>
+            </div>
+
+            {/* Newsletter discount code — code + capturing email checked
+                server-side here and re-checked in /api/checkout. */}
+            <div className="mt-4 border-t border-charcoal/10 pt-4">
+              {newsletterCode ? (
+                <div className="flex items-center justify-between rounded-sm border border-charcoal/10 bg-sage/10 px-3 py-2.5">
+                  <span className="text-sm text-charcoal/80">
+                    <span className="font-medium">{newsletterCode.code}</span>
+                    {' — '}{newsletterCode.percent}% off
+                  </span>
+                  <button
+                    onClick={() => setNewsletterCode(null)}
+                    className="text-xs text-charcoal/40 underline underline-offset-4 hover:text-terra"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <input
+                    id="discount-email"
+                    type="email"
+                    value={emailInput}
+                    onChange={e => setEmailInput(e.target.value)}
+                    placeholder="Email you signed up with"
+                    aria-label="Email you signed up with"
+                    autoComplete="email"
+                    className="w-full rounded-sm border border-charcoal/20 bg-transparent px-3 py-2 text-sm text-charcoal placeholder:text-charcoal/30 focus:border-charcoal focus:outline-none"
+                  />
+                  <label htmlFor="discount-code" className="block text-xs font-medium uppercase tracking-widest text-charcoal/40">
+                    Discount code
+                  </label>
+                  <input
+                    id="discount-code"
+                    type="text"
+                    value={codeInput}
+                    onChange={e => setCodeInput(e.target.value)}
+                    placeholder="e.g. BRK-A1B2C3"
+                    autoComplete="off"
+                    className="w-full rounded-sm border border-charcoal/20 bg-transparent px-3 py-2 font-mono text-sm uppercase text-charcoal placeholder:text-charcoal/30 placeholder:font-sans focus:border-charcoal focus:outline-none"
+                  />
+                  <button
+                    onClick={applyCode}
+                    disabled={applying}
+                    className="w-full rounded-sm border border-charcoal/20 py-2 text-xs font-medium text-charcoal transition-colors hover:border-charcoal disabled:opacity-60"
+                  >
+                    {applying ? 'Checking…' : 'Apply code'}
+                  </button>
+                  {codeError && <p className="text-xs text-red-600">{codeError}</p>}
+                </div>
+              )}
             </div>
 
             <div className="mt-4 border-t border-charcoal/10 pt-4">
